@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.env
+.env.*
+
+upload_ui/node_modules/
+upload_ui/.next/
+upload_ui/out/
+upload_ui/build/
+upload_ui/*.tsbuildinfo
