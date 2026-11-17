@@ -7,6 +7,9 @@ are recorded here. This project follows the Keep a Changelog format.
 
 ### Added
 
+- Added an initial context-managed quarantine streaming primitive that enforces
+  a byte cap, checks declared size, computes SHA-256, and removes temporary
+  bytes when processing exits.
 - Initial Stage 1 architecture, trust boundaries, lifecycle/state model, and
   proposed `Stage1ReadyHandoff` v1 in [ARCHITECTURE.md](ARCHITECTURE.md).
 - Baseline format, worker, session, and rate-limit policy inventory in

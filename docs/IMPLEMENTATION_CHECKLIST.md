@@ -103,7 +103,10 @@ tests before API behavior is built on them.
   reservation/state transitions.
 - [ ] Enforce configured per-uploader and per-hash rate limits.
 - [ ] Stream request bytes into ephemeral quarantine with a hard server-side
-  byte cap; do not buffer an unbounded upload in memory.
+  byte cap; do not buffer an unbounded upload in memory. A context-managed
+  streaming/quarantine primitive now enforces a caller-supplied byte cap,
+  checks the declared size, and computes the authoritative SHA-256; endpoint
+  integration and quarantine lifecycle configuration remain outstanding.
 - [ ] Compute the authoritative streaming SHA-256 and perform same-slot
   duplicate detection; treat any client hash only as an optimization hint.
 - [ ] Keep API handlers content-blind: do not invoke PDF, ZIP, MIME, or antivirus
