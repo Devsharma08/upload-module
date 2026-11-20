@@ -27,7 +27,7 @@ class UploadSessionCreated(ApiModel):
     upload_id: UUID
     state: UploadState
     expires_at: datetime
-    content_path: str
+    content_path: str | None = None
 
 
 class AdvisorySeverity(StrEnum):

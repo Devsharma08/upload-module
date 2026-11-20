@@ -8,6 +8,7 @@ import pytest
 from app.domain.upload_states import UploadState
 from app.repositories.upload_sessions import (
     IdempotencyConflictError,
+    SlotReservationConflictError,
     create_upload_session,
 )
 from app.schemas.uploads import CreateUploadSessionRequest
@@ -23,7 +24,7 @@ class FakeTransaction:
 
 class FakeConnection:
     def __init__(self) -> None:
-        self.session: dict[str, Any] | None = None
+        self.sessions: list[dict[str, Any]] = []
         self.state_events: list[tuple[Any, ...]] = []
 
     def transaction(self) -> FakeTransaction:
@@ -31,31 +32,54 @@ class FakeConnection:
 
     async def fetchrow(self, query: str, *args: Any) -> dict[str, Any] | None:
         if query.lstrip().startswith("INSERT INTO upload_sessions"):
-            if self.session is not None:
+            if any(
+                session["principal_id"] == args[1]
+                and session["idempotency_key"] == args[3]
+                or session["slot_reservation_id"] == args[4]
+                for session in self.sessions
+            ):
                 return None
 
             now = datetime.now(timezone.utc)
-            self.session = {
+            session = {
                 "id": args[0],
                 "principal_id": args[1],
                 "slot_id": args[2],
                 "idempotency_key": args[3],
-                "filename": args[4],
-                "declared_size": args[5],
-                "declared_media_type": args[6],
-                "client_sha256": args[7],
-                "replace_existing": args[8],
-                "state": args[9],
+                "slot_reservation_id": args[4],
+                "filename": args[5],
+                "declared_size": args[6],
+                "declared_media_type": args[7],
+                "client_sha256": args[8],
+                "replace_existing": args[9],
+                "state": args[10],
                 "created_at": now,
                 "updated_at": now,
-                "expires_at": args[10],
+                "expires_at": args[11],
             }
-            return self.session
+            self.sessions.append(session)
+            return session
 
-        assert self.session is not None
-        assert self.session["principal_id"] == args[0]
-        assert self.session["idempotency_key"] == args[1]
-        return self.session
+        if "WHERE principal_id = $1 AND idempotency_key = $2" in query:
+            return next(
+                (
+                    session
+                    for session in self.sessions
+                    if session["principal_id"] == args[0]
+                    and session["idempotency_key"] == args[1]
+                ),
+                None,
+            )
+        if "WHERE slot_reservation_id = $1" in query:
+            return next(
+                (
+                    {"id": session["id"]}
+                    for session in self.sessions
+                    if session["slot_reservation_id"] == args[0]
+                ),
+                None,
+            )
+        raise AssertionError(f"Unexpected fetchrow query: {query}")
 
     async def execute(self, query: str, *args: Any) -> None:
         assert "INSERT INTO upload_state_events" in query
@@ -96,6 +120,7 @@ def test_create_session_persists_receiving_state_and_initial_audit_event() -> No
             pool,
             principal_id="user-1",
             slot_id="application-1",
+            slot_reservation_id="reservation-1",
             idempotency_key="attempt-1",
             request=valid_request(),
             expires_at=expires_at,
@@ -109,8 +134,7 @@ def test_create_session_persists_receiving_state_and_initial_audit_event() -> No
             session.id,
             UploadState.RECEIVING.value,
         )
-        assert pool.connection.session is not None
-        assert pool.connection.session["client_sha256"] == "a" * 64
+        assert pool.connection.sessions[0]["client_sha256"] == "a" * 64
 
     asyncio.run(run())
 
@@ -122,6 +146,7 @@ def test_matching_idempotent_request_returns_original_session() -> None:
             pool,
             principal_id="user-1",
             slot_id="application-1",
+            slot_reservation_id="reservation-1",
             idempotency_key="attempt-1",
             request=valid_request(),
             expires_at=datetime.now(timezone.utc) + timedelta(minutes=15),
@@ -130,6 +155,7 @@ def test_matching_idempotent_request_returns_original_session() -> None:
             pool,
             principal_id="user-1",
             slot_id="application-1",
+            slot_reservation_id="reservation-1",
             idempotency_key="attempt-1",
             request=valid_request(client_sha256="a" * 64),
             expires_at=datetime.now(timezone.utc) + timedelta(minutes=15),
@@ -150,6 +176,7 @@ def test_idempotency_key_cannot_be_reused_for_different_request() -> None:
             pool,
             principal_id="user-1",
             slot_id="application-1",
+            slot_reservation_id="reservation-1",
             idempotency_key="attempt-1",
             request=valid_request(),
             expires_at=expires_at,
@@ -160,6 +187,7 @@ def test_idempotency_key_cannot_be_reused_for_different_request() -> None:
                 pool,
                 principal_id="user-1",
                 slot_id="application-1",
+                slot_reservation_id="reservation-1",
                 idempotency_key="attempt-1",
                 request=valid_request(filename="different.pdf"),
                 expires_at=expires_at,
@@ -177,6 +205,7 @@ def test_session_creation_requires_timezone_aware_expiry() -> None:
                 FakePool(),
                 principal_id="user-1",
                 slot_id="application-1",
+                slot_reservation_id="reservation-1",
                 idempotency_key="attempt-1",
                 request=valid_request(),
                 expires_at=datetime(2030, 1, 1),
@@ -192,9 +221,38 @@ def test_session_creation_rejects_oversized_idempotency_key() -> None:
                 FakePool(),
                 principal_id="user-1",
                 slot_id="application-1",
+                slot_reservation_id="reservation-1",
                 idempotency_key="k" * 256,
                 request=valid_request(),
                 expires_at=datetime.now(timezone.utc) + timedelta(minutes=15),
+            )
+
+    asyncio.run(run())
+
+
+def test_slot_reservation_cannot_be_reused_for_another_request() -> None:
+    async def run() -> None:
+        pool = FakePool()
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
+        await create_upload_session(
+            pool,
+            principal_id="user-1",
+            slot_id="application-1",
+            slot_reservation_id="reservation-1",
+            idempotency_key="attempt-1",
+            request=valid_request(),
+            expires_at=expires_at,
+        )
+
+        with pytest.raises(SlotReservationConflictError):
+            await create_upload_session(
+                pool,
+                principal_id="user-1",
+                slot_id="application-1",
+                slot_reservation_id="reservation-1",
+                idempotency_key="attempt-2",
+                request=valid_request(),
+                expires_at=expires_at,
             )
 
     asyncio.run(run())

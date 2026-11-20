@@ -26,7 +26,7 @@ structural and security properties and emit advisories for Stage 2.
 | Plane | Responsibilities | Trust rule |
 |---|---|---|
 | Client (untrusted) | Fast extension/size feedback, request creation, optional client SHA-256 hint, and (optimized flow) direct upload to quarantine. | Client checks and values are hints only; clients can bypass or alter them. |
-| Server control plane | FastAPI authentication/authorization, slot ownership and replacement checks, idempotency, rate limits, upload/session lifecycle, streaming byte cap and authoritative streaming hash (base flow), and atomic metadata/outbox state changes. | Re-validate all security decisions. Do not parse untrusted file internals here. |
+| Server control plane | FastAPI validates trusted gateway identity/slot/reservation claims, enforces idempotency, rate limits, upload/session lifecycle, streaming byte cap and authoritative streaming hash (base flow), and atomic metadata/outbox state changes. The gateway authenticates the user, authorizes and atomically reserves the slot. | Accept gateway claims only over a gateway-isolated network channel with a shared secret. Do not parse untrusted file internals here. |
 | Ephemeral data plane | Isolated quarantine; magic-byte/MIME checks, strict UTF-8 validation where applicable, antivirus, archive/macro checks, PDF probes, authoritative hash verification, and encryption. | Treat files as hostile. Apply CPU, memory, time, filesystem, and network restrictions; destroy temporary data after processing. |
 | Permanent storage | Write-once encrypted object vault, metadata, and transactional outbox. | Raw unencrypted files must not be persisted here. |
 
@@ -41,6 +41,18 @@ flowchart LR
   CP -->|"atomic metadata + outbox"| DB["PostgreSQL"]
   DB --> S2["Stage 2 handoff"]
 ```
+
+### Trusted gateway contract
+
+The current session-creation API accepts `X-Gateway-Token`,
+`X-Authenticated-Principal`, `X-Authorized-Slot`, and `X-Slot-Reservation`
+headers only over a gateway-isolated TLS channel. The gateway must strip
+incoming copies before setting these values, authenticate the principal,
+authorize the requested slot, and atomically reserve it. The API verifies the
+shared token, requires the authorized slot to match the request, and binds the
+reservation ID to one upload session. The API must not be directly reachable by
+untrusted clients. Gateway secret distribution, rotation, and network isolation
+must be configured before deployment.
 
 ## End-to-End Lifecycle
 

@@ -2,7 +2,12 @@ CREATE TABLE upload_sessions (
     id UUID PRIMARY KEY,
     principal_id TEXT NOT NULL,
     slot_id TEXT NOT NULL,
-    idempotency_key TEXT NOT NULL CHECK (char_length(idempotency_key) BETWEEN 1 AND 255),
+    idempotency_key TEXT NOT NULL
+        CHECK (char_length(idempotency_key) BETWEEN 1 AND 255),
+    slot_reservation_id TEXT NOT NULL
+        CONSTRAINT upload_sessions_slot_reservation_id_key UNIQUE
+        CONSTRAINT upload_sessions_slot_reservation_id_length_check
+        CHECK (char_length(slot_reservation_id) BETWEEN 1 AND 255),
 
     filename TEXT NOT NULL,
     declared_size BIGINT NOT NULL CHECK (declared_size > 0),

@@ -12,8 +12,9 @@ security control.
 - [x] UI TypeScript check passes (`pnpm exec tsc --noEmit` in `upload_ui`).
 - [x] Minimal FastAPI package, health endpoint, dependency manifest, and initial
   state/schema/API tests exist.
-- [ ] Database persistence, upload endpoints, worker, and end-to-end upload
-  flow are not yet implemented in the workspace.
+- [ ] Database-backed session creation is implemented, but database migrations,
+  file-byte upload, status retrieval, worker, and end-to-end upload flow remain
+  incomplete.
 - [ ] UI limits (PDF 10 MB, DOCX 5 MB, TXT 512 KB) do not match the policy
   baseline's generic 10 MB cap. Resolve and document before relying on them.
 - [x] UI no longer logs raw file bytes/hash and labels local checks `SELECTED`
@@ -98,12 +99,19 @@ tests before API behavior is built on them.
 ## 3. Implement the Control-Plane Upload and Session Flow
 
 - [ ] Enforce authentication, authorization, slot ownership, and explicit
-  replacement rules server-side.
+  replacement rules server-side. The session endpoint now requires the trusted
+  gateway token and authenticated principal/slot/reservation claims; gateway
+  deployment isolation, claim stripping, and atomic reservation behavior must
+  be configured and verified before exposure. Reservation release/reconciliation
+  after upload completion or expiry is not implemented.
 - [ ] Enforce idempotency keys, session TTL, and concurrency-safe slot
-  reservation/state transitions. A repository operation now atomically creates
-  `RECEIVING` sessions with an initial audit event and replays matching
-  `(principal_id, idempotency_key)` requests; mismatched replays are rejected.
-  HTTP integration, TTL policy enforcement, and slot reservation remain open.
+  reservation/state transitions. The API now creates `RECEIVING` sessions,
+  replays matching `(principal_id, idempotency_key)` requests, rejects mismatched
+  replays, and persists the gateway reservation ID. Atomic slot reservation is
+  delegated to the trusted gateway; session expiry enforcement remains open.
+- [ ] Configure production PostgreSQL lifecycle and apply schema migrations.
+  The service creates/closes a connection pool from `DATABASE_URL`; schema
+  installation is currently manual and readiness is exposed at `/readyz`.
 - [ ] Enforce configured per-uploader and per-hash rate limits.
 - [ ] Stream request bytes into ephemeral quarantine with a hard server-side
   byte cap; do not buffer an unbounded upload in memory. A context-managed

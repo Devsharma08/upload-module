@@ -7,6 +7,10 @@ are recorded here. This project follows the Keep a Changelog format.
 
 ### Added
 
+- Added a fail-closed trusted-gateway session-creation API, database pool
+  lifecycle/readiness check, and persisted gateway slot-reservation claims.
+- Added an SQL migration for existing upload-session tables to require unique
+  gateway reservation IDs.
 - Added transactional upload-session creation with idempotent replay checks and
   an initial state audit event.
 - Added an initial context-managed quarantine streaming primitive that enforces

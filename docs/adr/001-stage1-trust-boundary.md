@@ -15,8 +15,10 @@ attack surface and couple request handling to resource-intensive operations.
 Separate Stage 1 into three execution zones:
 
 1. The client is untrusted and performs UX checks only.
-2. The control plane independently enforces identity, authorization, slot
-   ownership, idempotency, rate limits, byte caps, and deterministic state
+2. The trusted gateway authenticates users, authorizes slot ownership, and
+   atomically reserves slots. The control plane validates gateway identity,
+   authorization, and reservation claims over a gateway-isolated channel, and
+   enforces idempotency, rate limits, byte caps, and deterministic state
    transitions. It does not parse file internals.
 3. An isolated, resource-capped ephemeral worker inspects quarantined bytes,
    performs security/structure checks, and encrypts accepted content for the
@@ -30,6 +32,9 @@ the outbox event atomically after encrypted storage succeeds.
 
 - Upload requests must be authorized and limited regardless of client-side
   validation.
+- The API must not be directly reachable by clients when it trusts gateway
+  identity headers; it must receive verified claims only over an isolated TLS
+  channel, and the gateway must strip caller-supplied copies before injection.
 - Base and direct-to-quarantine upload flows must converge on the same worker
   checks and state semantics.
 - Workers need bounded resources, no outbound network access, and reliable

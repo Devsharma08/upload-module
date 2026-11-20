@@ -13,6 +13,10 @@ class IdempotencyConflictError(ValueError):
     pass
 
 
+class SlotReservationConflictError(ValueError):
+    pass
+
+
 class UploadNotFoundError(LookupError):
     pass
 
@@ -35,16 +39,28 @@ async def create_upload_session(
     *,
     principal_id: str,
     slot_id: str,
+    slot_reservation_id: str,
     idempotency_key: str,
     request: CreateUploadSessionRequest,
     expires_at: datetime,
 ) -> UploadSessionRecord:
-    """Create or replay a session after the caller authorizes the principal and slot."""
-    if not principal_id:
-        raise ValueError("principal_id must not be empty")
-    if not slot_id:
-        raise ValueError("slot_id must not be empty")
-    if not idempotency_key:
+    """Create or replay a session after caller authorization and slot reservation."""
+    if not principal_id.strip() or principal_id != principal_id.strip():
+        raise ValueError(
+            "principal_id must be non-empty without surrounding whitespace"
+        )
+    if not slot_id.strip() or slot_id != slot_id.strip():
+        raise ValueError("slot_id must be non-empty without surrounding whitespace")
+    if (
+        not slot_reservation_id.strip()
+        or slot_reservation_id != slot_reservation_id.strip()
+        or len(slot_reservation_id) > 255
+    ):
+        raise ValueError("slot_reservation_id must contain 1 to 255 characters")
+    if (
+        not idempotency_key.strip()
+        or idempotency_key != idempotency_key.strip()
+    ):
         raise ValueError("idempotency_key must not be empty")
     if len(idempotency_key) > 255:
         raise ValueError("idempotency_key must be at most 255 characters")
@@ -58,17 +74,19 @@ async def create_upload_session(
                 """
                 INSERT INTO upload_sessions (
                     id, principal_id, slot_id, idempotency_key,
+                    slot_reservation_id,
                     filename, declared_size, declared_media_type, client_sha256,
                     replace_existing, state, expires_at
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-                ON CONFLICT (principal_id, idempotency_key) DO NOTHING
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                ON CONFLICT DO NOTHING
                 RETURNING id, state, created_at, updated_at, expires_at
                 """,
                 upload_id,
                 principal_id,
                 slot_id,
                 idempotency_key,
+                slot_reservation_id,
                 request.filename,
                 request.declared_size,
                 request.declared_media_type,
@@ -95,7 +113,7 @@ async def create_upload_session(
                 """
                 SELECT id, state, created_at, updated_at, expires_at,
                        slot_id, filename, declared_size, declared_media_type,
-                       client_sha256, replace_existing
+                       client_sha256, replace_existing, slot_reservation_id
                 FROM upload_sessions
                 WHERE principal_id = $1 AND idempotency_key = $2
                 FOR UPDATE
@@ -104,6 +122,18 @@ async def create_upload_session(
                 idempotency_key,
             )
             if existing is None:
+                reservation = await connection.fetchrow(
+                    """
+                    SELECT id
+                    FROM upload_sessions
+                    WHERE slot_reservation_id = $1
+                    """,
+                    slot_reservation_id,
+                )
+                if reservation is not None:
+                    raise SlotReservationConflictError(
+                        "Slot reservation was already used"
+                    )
                 raise RuntimeError("Conflicting upload session was not found")
 
             expected_sha256 = (
@@ -116,6 +146,7 @@ async def create_upload_session(
                 or existing["declared_media_type"] != request.declared_media_type
                 or existing["client_sha256"] != expected_sha256
                 or existing["replace_existing"] != request.replace_existing
+                or existing["slot_reservation_id"] != slot_reservation_id
             ):
                 raise IdempotencyConflictError(
                     "Idempotency key was already used with a different upload request"
