@@ -100,7 +100,10 @@ tests before API behavior is built on them.
 - [ ] Enforce authentication, authorization, slot ownership, and explicit
   replacement rules server-side.
 - [ ] Enforce idempotency keys, session TTL, and concurrency-safe slot
-  reservation/state transitions.
+  reservation/state transitions. A repository operation now atomically creates
+  `RECEIVING` sessions with an initial audit event and replays matching
+  `(principal_id, idempotency_key)` requests; mismatched replays are rejected.
+  HTTP integration, TTL policy enforcement, and slot reservation remain open.
 - [ ] Enforce configured per-uploader and per-hash rate limits.
 - [ ] Stream request bytes into ephemeral quarantine with a hard server-side
   byte cap; do not buffer an unbounded upload in memory. A context-managed

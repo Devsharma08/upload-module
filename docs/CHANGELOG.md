@@ -7,6 +7,8 @@ are recorded here. This project follows the Keep a Changelog format.
 
 ### Added
 
+- Added transactional upload-session creation with idempotent replay checks and
+  an initial state audit event.
 - Added an initial context-managed quarantine streaming primitive that enforces
   a byte cap, checks declared size, computes SHA-256, and removes temporary
   bytes when processing exits.

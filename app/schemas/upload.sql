@@ -2,12 +2,13 @@ CREATE TABLE upload_sessions (
     id UUID PRIMARY KEY,
     principal_id TEXT NOT NULL,
     slot_id TEXT NOT NULL,
-    idempotency_key TEXT NOT NULL,
+    idempotency_key TEXT NOT NULL CHECK (char_length(idempotency_key) BETWEEN 1 AND 255),
 
     filename TEXT NOT NULL,
     declared_size BIGINT NOT NULL CHECK (declared_size > 0),
     declared_media_type TEXT,
     client_sha256 CHAR(64),
+    replace_existing BOOLEAN NOT NULL DEFAULT FALSE,
 
     byte_size BIGINT CHECK (byte_size IS NULL OR byte_size >= 0),
     sha256 CHAR(64),
