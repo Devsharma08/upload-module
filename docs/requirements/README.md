@@ -1,8 +1,8 @@
-# EGCA Phase 1 Requirements
+# EGCA Upload Module Requirements
 
-These documents translate **EGCA Phase 1 Specification v2: Trusted and
-Traceable Data Preparation (Stages 1-5)** into implementation-facing
-requirements for the Python upload and preparation application.
+These documents define requirements for the **Python upload module only**,
+based on Stage 1 (Upload and Quarantine) of **EGCA Phase 1 Specification v2**.
+They are not a specification for the complete five-stage pipeline.
 
 The source specification is
 [`EGCA_Phase1_Specification_v2.pdf`](../../../Downloads/EGCA_Phase1_Specification_v2.pdf)
@@ -10,13 +10,11 @@ in the author's Downloads folder. Keep the source PDF as the authority when an
 interpretation here is disputed. These notes organize and clarify its
 requirements; they do not silently make product, policy, or vendor decisions.
 
-## Requirement set
+## Documents
 
-1. [Product scope and system-wide rules](01-product-and-trust.md)
-2. [Stage 1: upload and quarantine](02-stage-1-upload.md)
-3. [Stages 2 and 3: verification and governance](03-stages-2-and-3.md)
-4. [Stages 4 and 5: structuring and normalization](04-stages-4-and-5.md)
-5. [Contracts, failures, operations, and acceptance](05-contracts-and-acceptance.md)
+1. [Upload module scope and trust requirements](01-product-and-trust.md)
+2. [Stage 1 upload and quarantine requirements](02-stage-1-upload.md)
+3. [Upload API, service boundaries, and acceptance](03-upload-api-and-acceptance.md)
 
 ## How to read these requirements
 
@@ -27,30 +25,41 @@ requirements; they do not silently make product, policy, or vendor decisions.
   unresolved. Do not treat an example, placeholder, or local development choice
   as an approved production value.
 - Requirement IDs are stable references for implementation issues and tests.
-- The project is being implemented in Python. These documents intentionally do
-  not select an identity provider, database vendor, queue, object-storage
-  provider, malware-scanner deployment, KMS, or production hosting provider.
+- The project is being implemented in Python. These documents do not select an
+  identity provider, database vendor, queue, object-storage provider,
+  malware-scanner deployment, KMS, or production hosting provider.
 
-## Product boundary
+## Scope boundary
 
-Phase 1 accepts resume and job-description material and produces faithful,
-reproducible, traceable, tamper-evident records for downstream use. It records
-what a document says; it does not determine whether those claims are true or
-evaluate a candidate.
+In scope: authenticated upload requests, upload sessions, streaming bytes into
+quarantine, intake checks, authoritative file hashing, duplicate detection,
+version registration, upload outcomes, and reliable handoff to the next
+processing stage.
 
-The intended pipeline is:
+Out of scope for this requirements set: PDF text/visibility parsing (Stage 2),
+pipeline governance after intake (Stage 3), resume/JD content structuring
+(Stage 4), skill normalization (Stage 5), candidate evaluation, and the full
+signed-record verifier. The upload module must provide stable handoff fields
+for downstream components without implementing those components.
 
-```text
-Stage 1 Upload and quarantine
-  -> Stage 3 pre-gate
-  -> Stage 2 parse and visual verification
-  -> Stage 3 post-gate
-  -> Stage 4 rule-based structuring
-  -> Stage 5 normalization
-  -> signed seal and independent verification
-```
+## Implementation order
 
-Stage 3 deliberately gates work both before and after Stage 2. Stages 4 and 5
-are deterministic for fixed inputs and pinned versions. A small non-generative
-tagger is optional and must remain behind the agreement gate defined in the
-source specification; it is not part of the initial rules-only thin slice.
+Implementation proceeds in small, verifiable checkpoints:
+
+1. Establish the Python project, supported interpreter range, and local
+   virtual environment. Keep the initial project free of application
+   dependencies.
+2. Add only the runtime and test dependencies needed for a runnable API shell.
+   Lock them and verify a health endpoint and one test.
+3. Define upload contracts and unresolved policy decisions before implementing
+   service behavior.
+4. Implement bounded quarantine streaming and cleanup, then select and add
+   database/storage/scanner adapters only when each module is reached.
+5. Add intake inspection, session/version persistence, and API integration in
+   individually tested steps.
+6. Add real authentication/authorization and distributed rate limiting after
+   the local upload flow works, before any shared or public deployment.
+
+Authentication integration and API rate limiting are deferred, but hard upload
+byte limits and bounded processing resources are required from the first
+intake implementation. The upload-only milestone does not include Stages 2–5.
