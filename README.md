@@ -6,65 +6,14 @@ boundary. Browser code can be bypassed with tools such as `curl` or a modified
 script, so the backend must independently verify every security-relevant
 condition.
 
-## Backend Development
+## Application status
 
-The backend exposes a health check, readiness check, and an authenticated
-upload-session creation endpoint. File-byte upload, status retrieval, and
-worker processing are not implemented yet.
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
-export DATABASE_URL="postgresql://..."
-export TRUSTED_GATEWAY_TOKEN="$(openssl rand -hex 32)"
-uvicorn app.main:app --reload
-```
-
-For a fresh database, initialize the current schema before starting the API:
-
-```bash
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f app/schemas/upload.sql
-```
-
-For a database created from the previous schema, apply the reservation-ID
-migration instead:
-
-```bash
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
-  -f app/schemas/migrations/001_slot_reservation.sql
-```
-
-The API trusts only a gateway that is isolated from direct client access and
-connects over TLS. The gateway must strip client-supplied copies of these
-headers and set them after authentication, slot authorization, and atomic slot
-reservation:
-
-- `X-Gateway-Token`: shared secret matching `TRUSTED_GATEWAY_TOKEN` (at least
-  32 characters).
-- `X-Authenticated-Principal`: authenticated principal identifier.
-- `X-Authorized-Slot`: slot authorized and reserved by the gateway.
-- `X-Slot-Reservation`: unique reservation ID, reused for retries of the same
-  request.
-- `Idempotency-Key`: stable key reused when retrying the same request.
-
-The gateway must retain and reconcile its reservation for the lifetime of the
-upload session. The API does not yet expose upload status or a reservation
-release callback, so deployment must not rely on automatic release after
-processing until that lifecycle is implemented.
-
-Set `UPLOAD_SESSION_TTL_SECONDS` to configure session lifetime; it defaults to
-the 900-second placeholder in the policy document and is not calibrated.
-`GET /healthz` is a liveness check; `GET /readyz` requires a reachable
-PostgreSQL database. The session endpoint currently returns a null
-`content_path` because the upload-bytes endpoint is a later implementation
-checkpoint.
-
-Run the backend tests with:
-
-```bash
-pytest
-```
+The previous FastAPI backend, Next.js upload UI, and their tests have been
+removed to prepare for a clean redesign. No runnable upload application is
+currently present. The architecture, policy, and trust-boundary documents
+remain as design references; production service choices are intentionally
+undecided. Project manifests and other configuration files are retained and
+will be revised as the new implementation is established.
 
 This document describes the production Stage 1 upload architecture, its trust
 boundaries, task allocation, and two deployment flows.

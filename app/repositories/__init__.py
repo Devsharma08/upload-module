@@ -1,1 +1,0 @@
-"""Persistence operations for Stage 1."""

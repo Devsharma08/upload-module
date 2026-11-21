@@ -7,20 +7,18 @@ security control.
 
 ## Current Snapshot
 
-- [x] Architecture, policy baseline, trust-boundary ADR, and changelog exist.
-- [x] Next.js upload UI scaffold and global stylesheet exist.
-- [x] UI TypeScript check passes (`pnpm exec tsc --noEmit` in `upload_ui`).
-- [x] Minimal FastAPI package, health endpoint, dependency manifest, and initial
-  state/schema/API tests exist.
-- [ ] Database-backed session creation is implemented, but database migrations,
-  file-byte upload, status retrieval, worker, and end-to-end upload flow remain
-  incomplete.
+- [x] Architecture, policy baseline, trust-boundary ADR, and changelog remain
+  as design references.
+- [ ] Backend, UI, and implementation tests have been intentionally removed
+  while preparing a clean redesign. No runnable upload application currently
+  exists.
+- [ ] Identity provider, production object storage/KMS, and deployment target
+  have not yet been selected.
+- [ ] Database, queue, local object storage, worker, and integration choices
+  must be revalidated before implementation; retained manifests may be stale.
 - [ ] UI limits (PDF 10 MB, DOCX 5 MB, TXT 512 KB) do not match the policy
-  baseline's generic 10 MB cap. Resolve and document before relying on them.
-- [x] UI no longer logs raw file bytes/hash and labels local checks `SELECTED`
-  rather than server-confirmed `READY`.
-- [ ] Browser hashing reads the whole file into memory; keep it optional and
-  treat it only as a UX hint when API integration is implemented.
+  baseline's generic 10 MB cap. Resolve and document before rebuilding UI
+  preflight.
 
 ## Delivery Order
 

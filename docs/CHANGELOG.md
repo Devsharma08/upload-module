@@ -5,6 +5,12 @@ are recorded here. This project follows the Keep a Changelog format.
 
 ## [Unreleased]
 
+### Removed
+
+- Removed the previous FastAPI backend, Next.js upload UI implementation, and
+  their tests in preparation for a clean application redesign. Documentation,
+  configuration, and Git history were retained.
+
 ### Added
 
 - Added a fail-closed trusted-gateway session-creation API, database pool
