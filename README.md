@@ -14,10 +14,25 @@ source .venv/bin/activate
 python --version
 ```
 
-Install application and development dependencies only as their modules are
-started. The initial project setup intentionally has no application
-dependencies. Dependency additions and their lock workflow will be documented
-with the first runtime/test setup checkpoint.
+Install and lock the initial API and test dependencies:
+
+```bash
+python -m pip install "pip-tools>=7.4,<8.0"
+pip-compile --extra dev --strip-extras --generate-hashes \
+  --output-file requirements.lock pyproject.toml
+python -m pip install -r requirements.lock
+python -m pip install --no-deps -e .
+pytest
+```
+
+Run the local API shell with:
+
+```bash
+uvicorn upload_module.app:app --reload
+```
+
+Dependencies for storage, persistence, scanning, authentication, and
+rate-limiting will be added only when those modules are started.
 
 See [the upload requirements](docs/requirements/README.md) for scope,
 trust-boundary requirements, and implementation order.
