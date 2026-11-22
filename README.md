@@ -51,6 +51,7 @@ the existing ready upload and do not create another outbox row.
 Unfinished sessions expire after `UPLOAD_SESSION_TTL_SECONDS` (one hour by
 default); expiration is applied when a session is read or its content is
 submitted.
+Quarantine filenames remain internal metadata and are not returned by the API.
 
 All endpoints refuse requests unless `UPLOAD_ENV=development`; the identity is
 a fixed local `dev-user`, not real authentication or authorization. Do not bind

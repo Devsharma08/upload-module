@@ -179,18 +179,25 @@ async def test_upload_session_and_content_reach_ready(
     assert result["actual_type"] == "application/pdf"
     assert result["page_count"] == 1
     assert result["version_seq"] == 1
-    assert result["quarantine_ref"].startswith("upload-")
-    assert str(tmp_path) not in result["quarantine_ref"]
+    assert "quarantine_ref" not in result
 
-    quarantine_path = tmp_path / "quarantine" / result["quarantine_ref"]
+    quarantine_files = list((tmp_path / "quarantine").glob("upload-*.part"))
+    assert len(quarantine_files) == 1
+    quarantine_path = quarantine_files[0]
     assert quarantine_path.read_bytes() == content
 
     status_response = await send_request("GET", f"/uploads/{upload_id}")
     assert status_response.status_code == 200
     assert status_response.json()["status"] == "READY"
+    assert "quarantine_ref" not in status_response.json()
 
     with sqlite3.connect(tmp_path / "metadata.sqlite3") as connection:
         assert connection.execute("SELECT COUNT(*) FROM outbox").fetchone()[0] == 1
+        stored_ref = connection.execute(
+            "SELECT quarantine_ref FROM uploads WHERE upload_id = ?",
+            (upload_id,),
+        ).fetchone()[0]
+    assert stored_ref == quarantine_path.name
 
 
 @pytest.mark.anyio
@@ -263,7 +270,8 @@ async def test_upload_blocks_docx_with_embedded_macro(
     assert response.status_code == 423
     assert response.json()["detail"]["reason_code"] == "DOCX_ACTIVE_CONTENT"
     assert status_response.json()["status"] == "BLOCKED"
-    assert status_response.json()["quarantine_ref"] is not None
+    assert "quarantine_ref" not in status_response.json()
+    assert len(list((tmp_path / "quarantine").glob("upload-*.part"))) == 1
 
 
 @pytest.mark.anyio
@@ -475,7 +483,7 @@ async def test_upload_blocks_malware_and_retains_quarantined_file(
     assert response.status_code == 423
     assert response.json()["detail"]["reason_code"] == "MALWARE_DETECTED"
     assert status_response.json()["status"] == "BLOCKED"
-    assert status_response.json()["quarantine_ref"] is not None
+    assert "quarantine_ref" not in status_response.json()
     assert len(list((tmp_path / "quarantine").glob("upload-*.part"))) == 1
 
 

@@ -93,7 +93,6 @@ def _session_response(session: UploadSession) -> dict[str, int | str | None]:
         "uploaded_at": session.uploaded_at,
         "expires_at": session.expires_at,
         "duplicate_of": session.duplicate_of,
-        "quarantine_ref": session.quarantine_ref,
         "upload_url": f"/uploads/{session.upload_id}/content"
         if session.status == "CREATED"
         else None,
