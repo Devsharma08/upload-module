@@ -15,6 +15,9 @@ dependencies = [
     "uvicorn>=0.34,<1.0",
 ]
 
+[project.scripts]
+upload-dispatch-outbox = "upload_module.dispatch_outbox:main"
+
 [project.optional-dependencies]
 dev = [
     "httpx>=0.28,<1.0",

@@ -14,8 +14,8 @@ intake checks pass.
   approved identity/authorization service.
 - **S1-003:** Support the specification's PDF and DOCX upload track. The
   specification also permits a JD supplied as text, but does not fully define
-  that intake contract; decide and document whether plain text is accepted in
-  the initial upload endpoint.
+  that intake contract. For the current local MVP, job descriptions are
+  uploaded as PDF or DOCX documents; plain-text JD intake is out of scope.
 - **S1-004:** Treat filename, extension, declared MIME type, client hash, and
   other client metadata as hints only. The server/isolated inspection path
   determines actual format and authoritative digest.

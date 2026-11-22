@@ -45,9 +45,21 @@ The local API uses three steps:
 3. `GET /uploads/{upload_id}` reads the stored session status.
 
 SQLite stores local session metadata, idempotency keys, version sequences, and
-an outbox row in the same transaction as the `READY` status. The outbox is not
-yet published to a queue. Duplicate bytes in the same owner/job scope link to
-the existing ready upload and do not create another outbox row.
+an outbox row in the same transaction as the `READY` status. Run
+`upload-dispatch-outbox` to write pending events as one JSON file per event to
+`UPLOAD_HANDOFF_DIR` (defaults to `.upload-handoff`). Event filenames are
+stable; a retry after writing the file but before acknowledging SQLite verifies
+the existing file and safely marks the event published. A different payload at
+the same event path is an explicit conflict. This local handoff is a filesystem
+queue for development, not a production queue integration. The dispatcher
+prints its count and exits nonzero with the underlying error if delivery or
+database acknowledgement fails; run it again after addressing the cause.
+
+Duplicate bytes in the same owner/job scope link to the existing ready upload
+and do not create another outbox row. A job description uses the same PDF/DOCX
+document flow as a resume, selected with `"track": "job_description"` when
+creating the session. Plain-text JD intake is not part of this local MVP.
+
 Unfinished sessions expire after `UPLOAD_SESSION_TTL_SECONDS` (one hour by
 default); expiration is applied when a session is read or its content is
 submitted.

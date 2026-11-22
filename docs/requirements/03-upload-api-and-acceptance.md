@@ -32,8 +32,9 @@ The current local development prototype uses `POST /uploads` to create a
 metadata session with an `Idempotency-Key`, `PUT /uploads/{upload_id}/content`
 to stream bytes, and `GET /uploads/{upload_id}` to read status. This route
 shape is a development interface, not final product approval. Its `READY`
-outbox event is persisted locally but is not yet published to a downstream
-queue.
+outbox event is persisted locally and can be dispatched to a development-only
+filesystem handoff using `upload-dispatch-outbox`; no production queue is
+selected.
 
 ## Session and version requirements
 

@@ -43,6 +43,15 @@ class UploadSession:
     quarantine_ref: str | None
 
 
+@dataclass(frozen=True)
+class OutboxEvent:
+    event_id: str
+    upload_id: str
+    event_type: str
+    payload: str
+    created_at: str
+
+
 def _session_from_row(row: sqlite3.Row) -> UploadSession:
     return UploadSession(
         upload_id=row["upload_id"],
@@ -417,3 +426,42 @@ class UploadRepository:
                 (upload_id,),
             ).fetchone()
             return _session_from_row(row)
+
+    def pending_outbox(self, *, limit: int = 100) -> list[OutboxEvent]:
+        if limit <= 0:
+            raise ValueError("limit must be greater than zero")
+
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT event_id, upload_id, event_type, payload, created_at
+                FROM outbox
+                WHERE published_at IS NULL
+                ORDER BY created_at, event_id
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        return [
+            OutboxEvent(
+                event_id=row["event_id"],
+                upload_id=row["upload_id"],
+                event_type=row["event_type"],
+                payload=row["payload"],
+                created_at=row["created_at"],
+            )
+            for row in rows
+        ]
+
+    def mark_outbox_published(self, event_id: str) -> bool:
+        published_at = datetime.now(timezone.utc).isoformat()
+        with self._connect() as connection:
+            cursor = connection.execute(
+                """
+                UPDATE outbox
+                SET published_at = ?
+                WHERE event_id = ? AND published_at IS NULL
+                """,
+                (published_at, event_id),
+            )
+        return cursor.rowcount == 1

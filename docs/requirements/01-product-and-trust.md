@@ -144,7 +144,8 @@ and document:
 These are development-only implementation choices, not production approvals:
 
 - SQLite stores local upload sessions, version sequences, and transactional
-  outbox records. The outbox currently has no publisher.
+  outbox records. A local filesystem dispatcher publishes each outbox event as
+  an idempotent JSON file; this does not select or approve a production queue.
 - A local filesystem directory stores quarantined files under generated,
   opaque references.
 - Poppler `pdfinfo` performs basic PDF page/encryption checks. Python's

@@ -111,6 +111,7 @@ async def send_request(
 async def create_session(
     *,
     filename: str = "resume.pdf",
+    track: str = "resume",
     declared_content_type: str | None = None,
     declared_size_bytes: int | None = None,
     idempotency_key: str = "test-upload",
@@ -118,7 +119,7 @@ async def create_session(
     body: dict[str, object] = {
         "owner_id": "owner-1",
         "job_id": "job-1",
-        "track": "resume",
+        "track": track,
         "filename": filename,
     }
     if declared_content_type is not None:
@@ -216,6 +217,25 @@ async def test_upload_accepts_docx_package(
     assert response.json()["actual_type"].endswith("wordprocessingml.document")
     assert response.json()["page_count"] is None
     assert response.json()["sha256"] == sha256(content).hexdigest()
+
+
+@pytest.mark.anyio
+async def test_job_description_accepts_document_upload(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    enable_development(tmp_path, monkeypatch)
+    content = make_docx()
+    session = await create_session(
+        filename="job-description.docx",
+        track="job_description",
+    )
+
+    response = await put_content(session.json()["upload_id"], content)
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "READY"
+    assert response.json()["actual_type"].endswith("wordprocessingml.document")
 
 
 @pytest.mark.anyio

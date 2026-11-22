@@ -1,6 +1,7 @@
 .venv/
 .quarantine/
 .upload-metadata.sqlite3*
+.upload-handoff/
 __pycache__/
 *.py[cod]
 .pytest_cache/
