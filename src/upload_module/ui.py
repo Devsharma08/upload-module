@@ -11,48 +11,61 @@ _UPLOAD_PAGE = """<!doctype html>
     :root {
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color: #17231f;
-      background: #f3f5ef;
+      background: #f5f7f3;
       font-synthesis: none;
       text-rendering: optimizeLegibility;
       --ink: #17231f;
       --muted: #65736d;
       --green: #19745a;
       --line: #e2e8e1;
+      --surface: #fff;
     }
     * { box-sizing: border-box; }
     body { margin: 0; min-height: 100vh; }
     button, input, select { font: inherit; }
-    .shell { max-width: 1080px; margin: 0 auto; padding: 28px 24px 56px; }
-    header { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+    .shell { max-width: 1140px; margin: 0 auto; padding: 24px 28px 48px; }
+    header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-bottom: 17px; border-bottom: 1px solid #e5eae3; }
     .brand { display: flex; align-items: center; gap: 11px; font-size: 15px; font-weight: 750; letter-spacing: -.02em; }
     .brand-mark { display: grid; width: 35px; height: 35px; place-items: center; border-radius: 11px; color: white; background: var(--green); }
     .environment { color: #236449; background: #e1f1e8; border: 1px solid #cce5d6; border-radius: 999px; padding: 7px 11px; font-size: 11px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
-    .intro { padding: 57px 0 30px; }
+    .intro { padding: 48px 0 27px; }
     .eyebrow { color: var(--green); font-size: 12px; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
-    h1 { margin: 12px 0 10px; font-size: clamp(32px, 5vw, 48px); line-height: 1.06; letter-spacing: -.055em; }
-    .intro p { max-width: 590px; margin: 0; color: var(--muted); font-size: 16px; line-height: 1.65; }
+    h1 { margin: 11px 0 9px; font-size: clamp(32px, 5vw, 44px); line-height: 1.08; letter-spacing: -.05em; }
+    .intro p { max-width: 620px; margin: 0; color: var(--muted); font-size: 15px; line-height: 1.65; }
+    .workflow { display: flex; align-items: center; max-width: 580px; margin: 0 0 22px; }
+    .workflow-step { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; color: #89958e; font-size: 11px; font-weight: 700; }
+    .workflow-step .number { display: grid; width: 25px; height: 25px; place-items: center; border: 1px solid #dce5dc; border-radius: 50%; color: #77847c; background: #fff; font-size: 11px; }
+    .workflow-step.active { color: #245c49; }
+    .workflow-step.active .number { border-color: #19745a; color: #fff; background: #19745a; box-shadow: 0 0 0 4px #19745a16; }
+    .workflow-step.complete { color: #19745a; }
+    .workflow-step.complete .number { border-color: #cce7d7; color: #19745a; background: #e8f5ed; }
+    .workflow-step.failed { color: #b54730; }
+    .workflow-step.failed .number { border-color: #f2c7be; color: #fff; background: #c74b36; }
+    .workflow-line { height: 1px; flex: 1 1 auto; min-width: 22px; margin: 0 11px; background: #dfe6de; }
     .layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(260px, .75fr); gap: 20px; align-items: start; }
-    .card { border: 1px solid var(--line); border-radius: 18px; background: #fff; box-shadow: 0 12px 38px #1f38200a; }
-    .form-card { padding: 26px; }
+    .card { border: 1px solid var(--line); border-radius: 17px; background: var(--surface); box-shadow: 0 10px 32px #1f382008; }
+    .form-card { padding: 25px; }
     .card-heading { display: flex; justify-content: space-between; align-items: start; gap: 16px; margin-bottom: 23px; }
     h2 { margin: 0; font-size: 18px; letter-spacing: -.025em; }
     .subheading { margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
-    .step { color: #819087; font-size: 12px; font-weight: 700; }
+    .step { padding: 6px 9px; border-radius: 7px; color: #65736d; background: #f2f5f1; font-size: 10px; font-weight: 750; letter-spacing: .07em; }
     .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     .field { display: flex; flex-direction: column; gap: 7px; }
     .field.full { grid-column: 1 / -1; }
     label { color: #33423b; font-size: 12px; font-weight: 700; }
-    input, select { width: 100%; min-height: 43px; padding: 10px 12px; border: 1px solid #dce4dc; border-radius: 9px; color: var(--ink); background: #fff; outline: none; }
+    input, select { width: 100%; min-height: 43px; padding: 10px 12px; border: 1px solid #dce4dc; border-radius: 9px; color: var(--ink); background: #fff; outline: none; transition: border-color .15s, box-shadow .15s; }
     input:focus, select:focus, button:focus-visible { border-color: #53a181; box-shadow: 0 0 0 3px #19745a1a; outline: none; }
-    .file-box { min-height: 139px; padding: 22px; display: grid; place-items: center; text-align: center; border: 1px dashed #b9c9bd; border-radius: 12px; background: #f9fbf8; cursor: pointer; transition: background .15s, border-color .15s; }
+    .file-box { min-height: 154px; padding: 20px; display: grid; place-items: center; text-align: center; border: 1px dashed #b9c9bd; border-radius: 12px; background: #f9fbf8; cursor: pointer; transition: background .15s, border-color .15s, box-shadow .15s; }
     .file-box:hover, .file-box.dragging { border-color: var(--green); background: #f0f8f3; }
+    .file-box:focus-within { border-color: var(--green); box-shadow: 0 0 0 3px #19745a1a; }
     .file-icon { display: grid; width: 34px; height: 34px; margin: 0 auto 9px; place-items: center; border-radius: 10px; color: var(--green); background: #e5f2e9; font-size: 19px; }
+    .file-title, .file-hint, .file-name { display: block; }
     .file-title { color: #33423b; font-size: 13px; font-weight: 700; }
-    .file-hint { margin-top: 5px; color: var(--muted); font-size: 11px; }
+    .file-hint { margin-top: 6px; color: var(--muted); font-size: 11px; }
     .file-name { margin-top: 9px; color: var(--green); font-size: 12px; font-weight: 700; overflow-wrap: anywhere; }
-    .file-box input { position: absolute; width: 1px; height: 1px; opacity: 0; }
-    .actions { display: flex; align-items: center; gap: 12px; margin-top: 21px; }
-    .primary, .secondary { min-height: 42px; padding: 0 17px; border: 1px solid transparent; border-radius: 9px; cursor: pointer; font-size: 13px; font-weight: 750; transition: transform .12s, background .12s; }
+    .file-box input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+    .actions { display: flex; align-items: center; gap: 13px; margin-top: 20px; }
+    .primary, .secondary { min-height: 43px; padding: 0 17px; border: 1px solid transparent; border-radius: 9px; cursor: pointer; font-size: 13px; font-weight: 750; transition: transform .12s, background .12s, box-shadow .12s; }
     .primary { color: #fff; background: var(--green); }
     .primary:hover:not(:disabled) { background: #105e48; transform: translateY(-1px); }
     .secondary { color: #314039; border-color: var(--line); background: #fff; }
@@ -60,6 +73,14 @@ _UPLOAD_PAGE = """<!doctype html>
     button:disabled { opacity: .55; cursor: not-allowed; }
     .message { min-height: 18px; margin: 13px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
     .message.error { color: #b42318; }
+    .upload-progress { margin-top: 15px; }
+    .upload-progress[hidden] { display: none; }
+    .progress-meta { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 7px; color: var(--muted); font-size: 11px; }
+    .progress-meta strong { color: #33423b; font-weight: 700; }
+    progress { display: block; width: 100%; height: 7px; overflow: hidden; border: 0; border-radius: 99px; appearance: none; background: #e8eee8; }
+    progress::-webkit-progress-bar { border-radius: 99px; background: #e8eee8; }
+    progress::-webkit-progress-value { border-radius: 99px; background: #19745a; transition: width .18s ease; }
+    progress::-moz-progress-bar { border-radius: 99px; background: #19745a; }
     .side { display: grid; gap: 16px; }
     .status-card, .info-card { padding: 22px; }
     .status-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -69,29 +90,36 @@ _UPLOAD_PAGE = """<!doctype html>
     .status-value[data-state="READY"] .dot, .status-value[data-state="DUPLICATE"] .dot { background: #20a36f; }
     .status-value[data-state="REJECTED"], .status-value[data-state="BLOCKED"], .status-value[data-state="FAILED"], .status-value[data-state="EXPIRED"] { color: #b54730; }
     .status-value[data-state="REJECTED"] .dot, .status-value[data-state="BLOCKED"] .dot, .status-value[data-state="FAILED"] .dot, .status-value[data-state="EXPIRED"] .dot { background: #d65b45; }
-    .status-empty { padding: 25px 0 11px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+    .status-empty { padding: 22px 0 17px; color: var(--muted); font-size: 13px; line-height: 1.6; }
     .status-details { display: grid; gap: 12px; margin-top: 20px; }
     .detail { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 12px; }
     .detail strong { color: #33423b; text-align: right; overflow-wrap: anywhere; font-weight: 650; }
     .status-actions { display: flex; gap: 8px; margin-top: 19px; }
     .status-actions button { flex: 1; padding: 0 10px; font-size: 12px; }
-    .info-card { background: #edf4ed; border-color: #dfebdf; }
+    .info-card { background: #f0f6ef; border-color: #e0eadf; }
     .info-card h2 { font-size: 14px; }
     .info-card p { margin: 9px 0 0; color: #586a60; font-size: 12px; line-height: 1.65; }
     .limits { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
     .pill { padding: 6px 9px; border-radius: 999px; color: #416351; background: #dcebdd; font-size: 10px; font-weight: 700; }
     footer { margin-top: 27px; color: #87938c; font-size: 11px; text-align: center; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+    }
     @media (max-width: 720px) {
       .shell { padding: 20px 16px 38px; }
       .intro { padding: 42px 0 24px; }
       .layout { grid-template-columns: 1fr; }
       .form-card { padding: 21px; }
+      .workflow { max-width: 100%; }
     }
     @media (max-width: 440px) {
+      .shell { padding-inline: 14px; }
       .fields { grid-template-columns: 1fr; }
       .field.full { grid-column: auto; }
       .environment { font-size: 9px; }
       .actions { align-items: stretch; flex-direction: column; }
+      .workflow-step { gap: 6px; font-size: 10px; }
+      .workflow-line { min-width: 13px; margin-inline: 6px; }
     }
   </style>
 </head>
@@ -106,6 +134,13 @@ _UPLOAD_PAGE = """<!doctype html>
       <h1>Upload a document.<br>Track every step.</h1>
       <p>Send a resume or job description through the local upload and quarantine flow. Files are checked before they are marked ready.</p>
     </section>
+    <div class="workflow" aria-label="Upload steps">
+      <div class="workflow-step" data-workflow="1"><span class="number">1</span><span>Session</span></div>
+      <span class="workflow-line" aria-hidden="true"></span>
+      <div class="workflow-step" data-workflow="2"><span class="number">2</span><span>Transfer</span></div>
+      <span class="workflow-line" aria-hidden="true"></span>
+      <div class="workflow-step" data-workflow="3"><span class="number">3</span><span>Security checks</span></div>
+    </div>
     <main class="layout">
       <section class="card form-card" aria-labelledby="upload-heading">
         <div class="card-heading">
@@ -150,6 +185,10 @@ _UPLOAD_PAGE = """<!doctype html>
             <span class="subheading">A fresh retry creates a new upload session.</span>
           </div>
           <p class="message" id="message" role="status" aria-live="polite"></p>
+          <div class="upload-progress" id="upload-progress" hidden>
+            <div class="progress-meta"><span id="progress-label">Preparing transfer</span><strong id="progress-percent">0%</strong></div>
+            <progress id="progress-bar" max="100" value="0" aria-label="Upload progress"></progress>
+          </div>
         </form>
       </section>
       <aside class="side">
@@ -188,6 +227,10 @@ _UPLOAD_PAGE = """<!doctype html>
     const statusDetails = document.querySelector("#status-details");
     const checkButton = document.querySelector("#check-status");
     const copyButton = document.querySelector("#copy-id");
+    const progressPanel = document.querySelector("#upload-progress");
+    const progressLabel = document.querySelector("#progress-label");
+    const progressPercent = document.querySelector("#progress-percent");
+    const progressBar = document.querySelector("#progress-bar");
     const maxUploadBytes = __MAX_UPLOAD_BYTES__;
     let activeUploadId = null;
     let lastFileName = "";
@@ -197,6 +240,22 @@ _UPLOAD_PAGE = """<!doctype html>
     function setMessage(text, isError = false) {
       message.textContent = text;
       message.classList.toggle("error", isError);
+    }
+
+    function setWorkflow(activeStep, failed = false) {
+      for (const step of document.querySelectorAll(".workflow-step")) {
+        const stepNumber = Number(step.dataset.workflow);
+        step.classList.toggle("active", stepNumber === activeStep && !failed);
+        step.classList.toggle("complete", stepNumber < activeStep);
+        step.classList.toggle("failed", failed && stepNumber === activeStep);
+      }
+    }
+
+    function setProgress(percent, label) {
+      progressPanel.hidden = false;
+      progressBar.value = percent;
+      progressPercent.textContent = `${percent}%`;
+      progressLabel.textContent = label;
     }
 
     function setStatus(state, details = {}) {
@@ -226,6 +285,43 @@ _UPLOAD_PAGE = """<!doctype html>
       }
     }
 
+    function uploadFile(file, uploadId) {
+      return new Promise((resolve, reject) => {
+        const request = new XMLHttpRequest();
+        request.open("PUT", `/uploads/${encodeURIComponent(uploadId)}/content`);
+        request.setRequestHeader("Content-Type", "application/octet-stream");
+        request.upload.addEventListener("progress", (event) => {
+          if (!event.lengthComputable) return;
+          const percent = Math.min(99, Math.round((event.loaded / event.total) * 100));
+          setProgress(percent, "Sending document");
+        });
+        request.upload.addEventListener("load", () => {
+          setProgress(100, "Transfer complete · checking document");
+          setWorkflow(3);
+          setMessage("File received. Running document and malware checks…");
+        });
+        request.addEventListener("load", () => {
+          let payload = {};
+          try {
+            payload = JSON.parse(request.responseText);
+          } catch (_error) {
+            reject(new Error("The server returned an unreadable response."));
+            return;
+          }
+          if (request.status < 200 || request.status >= 300) {
+            const detail = payload.detail;
+            const reason = typeof detail === "string" ? detail : detail?.reason_code || detail?.message;
+            reject(new Error(reason || `Request failed (${request.status})`));
+            return;
+          }
+          resolve(payload);
+        });
+        request.addEventListener("error", () => reject(new Error("Network error while uploading the document.")));
+        request.addEventListener("abort", () => reject(new Error("Upload was interrupted.")));
+        request.send(file);
+      });
+    }
+
     async function readResponse(response) {
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -240,6 +336,12 @@ _UPLOAD_PAGE = """<!doctype html>
       const file = fileInput.files[0];
       fileName.textContent = file ? file.name : "";
       fileTitle.textContent = file ? "File selected" : "Choose a file or drop it here";
+      if (file) {
+        const size = file.size < 1024 * 1024
+          ? `${(file.size / 1024).toFixed(1)} KB`
+          : `${(file.size / (1024 * 1024)).toFixed(2)} MB`;
+        fileName.textContent = `${file.name} · ${size}`;
+      }
       lastFileName = file ? file.name : "";
     });
 
@@ -286,6 +388,9 @@ _UPLOAD_PAGE = """<!doctype html>
       checkButton.disabled = true;
       copyButton.disabled = true;
       activeUploadId = null;
+      progressPanel.hidden = true;
+      progressBar.value = 0;
+      setWorkflow(1);
       setMessage("Creating an upload session…");
       setStatus("CREATED", { filename: file.name });
       lastFileName = file.name;
@@ -310,33 +415,42 @@ _UPLOAD_PAGE = """<!doctype html>
         activeUploadId = session.upload_id;
         checkButton.disabled = false;
         copyButton.disabled = false;
+        setWorkflow(2);
+        setProgress(0, "Starting transfer");
         setStatus(session.status, session);
         setMessage("Uploading and checking your document…");
-        const result = await readResponse(await fetch(`/uploads/${encodeURIComponent(activeUploadId)}/content`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/octet-stream" },
-          body: file
-        }));
+        const result = await uploadFile(file, activeUploadId);
+        setProgress(100, "Document checked");
         setStatus(result.status, result);
         setMessage(result.status === "READY" ? "Upload complete. The document is ready for the next stage." : `Upload complete with status ${result.status}.`);
       } catch (error) {
-        setMessage(error.message || "The upload could not be completed.", true);
-        if (activeUploadId) await refreshStatus();
-        else setStatus("");
+        const errorMessage = error.message || "The upload could not be completed.";
+        if (!progressPanel.hidden) {
+          progressLabel.textContent = progressBar.value === 100
+            ? "Transfer complete · checks failed"
+            : "Transfer interrupted";
+        }
+        if (activeUploadId) {
+          setWorkflow(3, true);
+          await refreshStatus(false);
+        } else {
+          setStatus("");
+        }
+        setMessage(errorMessage, true);
       } finally {
         submitButton.disabled = false;
       }
     });
 
-    async function refreshStatus() {
+    async function refreshStatus(announce = true) {
       if (!activeUploadId) return;
       checkButton.disabled = true;
       try {
         const result = await readResponse(await fetch(`/uploads/${encodeURIComponent(activeUploadId)}`));
         setStatus(result.status, result);
-        setMessage(`Current upload status: ${result.status}.`);
+        if (announce) setMessage(`Current upload status: ${result.status}.`);
       } catch (error) {
-        setMessage(error.message || "Could not read upload status.", true);
+        if (announce) setMessage(error.message || "Could not read upload status.", true);
       } finally {
         checkButton.disabled = false;
       }

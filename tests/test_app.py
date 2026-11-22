@@ -173,6 +173,8 @@ async def test_upload_home_page_is_development_only_and_shows_configured_limit(
     assert enabled_response.status_code == 200
     assert "Upload desk" in enabled_response.text
     assert "job_description" in enabled_response.text
+    assert "Upload steps" in enabled_response.text
+    assert "upload-progress" in enabled_response.text
     assert "5242880" in enabled_response.text
     assert "__MAX_UPLOAD_BYTES__" not in enabled_response.text
 
