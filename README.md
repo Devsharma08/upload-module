@@ -34,6 +34,12 @@ UPLOAD_DATABASE_PATH=.upload-metadata.sqlite3 \
 uvicorn upload_module.app:app --reload
 ```
 
+Open `http://127.0.0.1:8000/` for the local upload desk. It supports resume
+and job-description PDF/DOCX uploads, displays the outcome and basic file
+details, and lets you refresh the status by upload ID. The page is served only
+when `UPLOAD_ENV=development`, reflects the configured `UPLOAD_MAX_BYTES`
+limit, and has no external assets or frontend build step.
+
 The local API uses three steps:
 
 1. `POST /uploads` with JSON request metadata and an `Idempotency-Key` header

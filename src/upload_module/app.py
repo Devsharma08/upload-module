@@ -30,6 +30,7 @@ from upload_module.repository import (
     UploadSessionStateError,
 )
 from upload_module.scanning import ScannerUnavailableError, scan_file
+from upload_module.ui import upload_page
 
 app = FastAPI(title="Upload Module")
 
@@ -104,6 +105,16 @@ def _session_response(session: UploadSession) -> dict[str, int | str | None]:
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/", include_in_schema=False)
+async def upload_home() -> Response:
+    _require_development()
+    max_upload_bytes = _positive_int_setting(
+        "UPLOAD_MAX_BYTES",
+        DEFAULT_MAX_UPLOAD_BYTES,
+    )
+    return upload_page(max_upload_bytes)
 
 
 @app.post("/uploads", status_code=status.HTTP_201_CREATED)
