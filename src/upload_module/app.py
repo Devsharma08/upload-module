@@ -12,7 +12,7 @@ from upload_module.quarantine import (
 
 app = FastAPI(title="Upload Module")
 
-DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024 # 10 MB
 
 
 @app.get("/health")
