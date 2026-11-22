@@ -139,5 +139,22 @@ and document:
 - Exact policy for embedded scripts, active content, encrypted files, and
   malware/active-content disposition.
 
-Local development selections must be labeled as development-only; they do not
-resolve production decisions.
+## Current local MVP selections
+
+These are development-only implementation choices, not production approvals:
+
+- SQLite stores local upload sessions, version sequences, and transactional
+  outbox records. The outbox currently has no publisher.
+- A local filesystem directory stores quarantined files under generated,
+  opaque references.
+- Poppler `pdfinfo` performs basic PDF page/encryption checks. Python's
+  standard-library ZIP reader performs bounded DOCX package inspection.
+- ClamAV `clamscan` is the intended malware-scanner executable. A missing,
+  timed-out, or erroring scanner fails closed. Developers must install ClamAV
+  and keep signatures updated; tests use controlled fake executables and do
+  not certify the local scanner installation.
+- The API uses a fixed `dev-user` identity only when `UPLOAD_ENV=development`.
+  This is not authentication or owner/job authorization.
+
+None of these choices resolves the production provider, isolation, retention,
+threshold, authorization, or deployment decisions above.

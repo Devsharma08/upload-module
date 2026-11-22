@@ -28,6 +28,13 @@ Exact routes, HTTP method names, and whether bytes use multipart, raw streaming,
 or a presigned upload are product/infrastructure decisions. No API may claim
 `READY` before all required checks and persistence succeed.
 
+The current local development prototype uses `POST /uploads` to create a
+metadata session with an `Idempotency-Key`, `PUT /uploads/{upload_id}/content`
+to stream bytes, and `GET /uploads/{upload_id}` to read status. This route
+shape is a development interface, not final product approval. Its `READY`
+outbox event is persisted locally but is not yet published to a downstream
+queue.
+
 ## Session and version requirements
 
 - **API-001:** Session identifiers are unpredictable and do not disclose

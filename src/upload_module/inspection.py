@@ -31,6 +31,10 @@ _PDF_ACTIVE_CONTENT = re.compile(
     rb"/(?:JavaScript|JS|Launch|EmbeddedFile|OpenAction|AA)\b",
     re.IGNORECASE,
 )
+_DOCX_EXTERNAL_RELATIONSHIP = re.compile(
+    rb"""\bTargetMode\s*=\s*["']External["']""",
+    re.IGNORECASE,
+)
 
 
 def inspect_upload(
@@ -209,7 +213,7 @@ def _inspect_docx(
                         "DOCX_RELATIONSHIPS_TOO_LARGE",
                         "DOCX relationship metadata exceeds its inspection limit",
                     )
-                if b'TargetMode="External"' in relationship_data:
+                if _DOCX_EXTERNAL_RELATIONSHIP.search(relationship_data):
                     raise UploadBlockedError(
                         "DOCX_EXTERNAL_RELATIONSHIP",
                         "DOCX contains an external relationship",

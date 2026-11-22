@@ -30,16 +30,33 @@ Run the API locally with its development-only upload endpoint enabled:
 ```bash
 UPLOAD_ENV=development \
 UPLOAD_QUARANTINE_DIR=.quarantine \
+UPLOAD_DATABASE_PATH=.upload-metadata.sqlite3 \
 uvicorn upload_module.app:app --reload
 ```
 
-`POST /uploads` streams the raw request body into the configured quarantine
-directory, applies `UPLOAD_MAX_BYTES` (10 MiB by default), and returns an
-opaque upload ID, actual byte count, and server-computed SHA-256. It reports
-`QUARANTINED`, not `READY`: malware scanning, persistence, authentication,
-authorization, duplicate detection, and downstream handoff are not implemented
-yet. The endpoint refuses requests unless `UPLOAD_ENV=development`; do not
-bind this development endpoint to a shared or public network.
+The local API uses three steps:
+
+1. `POST /uploads` with JSON request metadata and an `Idempotency-Key` header
+   creates or replays an upload session.
+2. `PUT /uploads/{upload_id}/content` streams the raw body into the configured
+   quarantine directory, applies `UPLOAD_MAX_BYTES` (10 MiB by default),
+   performs file inspection and malware scanning, then records an explicit
+   outcome.
+3. `GET /uploads/{upload_id}` reads the stored session status.
+
+SQLite stores local session metadata, idempotency keys, version sequences, and
+an outbox row in the same transaction as the `READY` status. The outbox is not
+yet published to a queue. Duplicate bytes in the same owner/job scope link to
+the existing ready upload and do not create another outbox row.
+Unfinished sessions expire after `UPLOAD_SESSION_TTL_SECONDS` (one hour by
+default); expiration is applied when a session is read or its content is
+submitted.
+
+All endpoints refuse requests unless `UPLOAD_ENV=development`; the identity is
+a fixed local `dev-user`, not real authentication or authorization. Do not bind
+this development API to a shared or public network. Local PDF/DOCX inspection
+and ClamAV scanning are not sandboxed and are not production security
+boundaries.
 
 The local inspection step requires Poppler's `pdfinfo` executable for PDF page
 count and encryption checks. PDF page and DOCX archive limits have conservative
@@ -54,8 +71,9 @@ error fails closed. Set `UPLOAD_SCANNER_EXECUTABLE` only to a trusted local
 scanner executable. Install and keep ClamAV signatures updated before running
 the upload endpoint.
 
-Dependencies for storage, persistence, scanning, authentication, and
-rate-limiting will be added only when those modules are started.
+SQLite uses Python's standard library. Authentication and distributed
+rate-limiting remain deferred and are release blockers before any shared or
+public deployment.
 
 See [the upload requirements](docs/requirements/README.md) for scope,
 trust-boundary requirements, and implementation order.
