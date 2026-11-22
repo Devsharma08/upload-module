@@ -36,10 +36,23 @@ uvicorn upload_module.app:app --reload
 `POST /uploads` streams the raw request body into the configured quarantine
 directory, applies `UPLOAD_MAX_BYTES` (10 MiB by default), and returns an
 opaque upload ID, actual byte count, and server-computed SHA-256. It reports
-`QUARANTINED`, not `READY`: file inspection, persistence, authentication, and
-authorization are not implemented yet. The endpoint refuses requests unless
-`UPLOAD_ENV=development`; do not bind this development endpoint to a shared or
-public network.
+`QUARANTINED`, not `READY`: malware scanning, persistence, authentication,
+authorization, duplicate detection, and downstream handoff are not implemented
+yet. The endpoint refuses requests unless `UPLOAD_ENV=development`; do not
+bind this development endpoint to a shared or public network.
+
+The local inspection step requires Poppler's `pdfinfo` executable for PDF page
+count and encryption checks. PDF page and DOCX archive limits have conservative
+local defaults and can be overridden with `UPLOAD_MAX_PDF_PAGES`,
+`UPLOAD_MAX_DOCX_ENTRIES`, `UPLOAD_MAX_DOCX_UNCOMPRESSED_BYTES`, and
+`UPLOAD_MAX_DOCX_COMPRESSION_RATIO`. These are development defaults, not
+approved production policy thresholds.
+
+Uploads also require ClamAV's `clamscan` executable. The API accepts a file
+only when the scanner reports clean; a missing scanner, timeout, or scanner
+error fails closed. Set `UPLOAD_SCANNER_EXECUTABLE` only to a trusted local
+scanner executable. Install and keep ClamAV signatures updated before running
+the upload endpoint.
 
 Dependencies for storage, persistence, scanning, authentication, and
 rate-limiting will be added only when those modules are started.
