@@ -54,6 +54,9 @@ the same event path is an explicit conflict. This local handoff is a filesystem
 queue for development, not a production queue integration. The dispatcher
 prints its count and exits nonzero with the underlying error if delivery or
 database acknowledgement fails; run it again after addressing the cause.
+Failed upload sessions are terminal. After a transient intake failure, create a
+new session with a new `Idempotency-Key` and resend the original bytes; reusing
+the old key replays the failed session. Uploads are not retried automatically.
 
 Duplicate bytes in the same owner/job scope link to the existing ready upload
 and do not create another outbox row. A job description uses the same PDF/DOCX

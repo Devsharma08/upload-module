@@ -531,6 +531,49 @@ async def test_upload_fails_closed_when_scanner_is_unavailable(
 
 
 @pytest.mark.anyio
+async def test_transient_scanner_failure_recovers_with_new_session(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    enable_development(tmp_path, monkeypatch)
+    monkeypatch.setenv(
+        "UPLOAD_SCANNER_EXECUTABLE",
+        str(tmp_path / "does-not-exist"),
+    )
+    first_session = await create_session(idempotency_key="failed-attempt")
+
+    failed_response = await put_content(
+        first_session.json()["upload_id"],
+        make_pdf(),
+    )
+    replayed_session = await create_session(idempotency_key="failed-attempt")
+
+    assert failed_response.status_code == 503
+    assert replayed_session.json()["status"] == "FAILED"
+    assert replayed_session.json()["upload_id"] == first_session.json()["upload_id"]
+
+    monkeypatch.setenv(
+        "UPLOAD_SCANNER_EXECUTABLE",
+        make_scanner(tmp_path, exit_code=0),
+    )
+    retry_session = await create_session(idempotency_key="retry-attempt")
+    retry_response = await put_content(
+        retry_session.json()["upload_id"],
+        make_pdf(),
+    )
+    original_status = await send_request(
+        "GET",
+        f"/uploads/{first_session.json()['upload_id']}",
+    )
+
+    assert retry_response.status_code == 200
+    assert retry_response.json()["status"] == "READY"
+    assert original_status.json()["status"] == "FAILED"
+    with sqlite3.connect(tmp_path / "metadata.sqlite3") as connection:
+        assert connection.execute("SELECT COUNT(*) FROM outbox").fetchone()[0] == 1
+
+
+@pytest.mark.anyio
 async def test_upload_rejects_body_over_configured_limit(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
