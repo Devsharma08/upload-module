@@ -25,11 +25,21 @@ python -m pip install --no-deps -e .
 pytest
 ```
 
-Run the local API shell with:
+Run the API locally with its development-only upload endpoint enabled:
 
 ```bash
+UPLOAD_ENV=development \
+UPLOAD_QUARANTINE_DIR=.quarantine \
 uvicorn upload_module.app:app --reload
 ```
+
+`POST /uploads` streams the raw request body into the configured quarantine
+directory, applies `UPLOAD_MAX_BYTES` (10 MiB by default), and returns an
+opaque upload ID, actual byte count, and server-computed SHA-256. It reports
+`QUARANTINED`, not `READY`: file inspection, persistence, authentication, and
+authorization are not implemented yet. The endpoint refuses requests unless
+`UPLOAD_ENV=development`; do not bind this development endpoint to a shared or
+public network.
 
 Dependencies for storage, persistence, scanning, authentication, and
 rate-limiting will be added only when those modules are started.
