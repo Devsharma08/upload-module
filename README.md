@@ -56,7 +56,9 @@ prints its count and exits nonzero with the underlying error if delivery or
 database acknowledgement fails; run it again after addressing the cause.
 Failed upload sessions are terminal. After a transient intake failure, create a
 new session with a new `Idempotency-Key` and resend the original bytes; reusing
-the old key replays the failed session. Uploads are not retried automatically.
+the old key replays the failed session. Scanner outages/timeouts are attempted
+at most `UPLOAD_SCANNER_MAX_ATTEMPTS` times (2 by default); exhausted attempts
+mark the session `FAILED`.
 
 Duplicate bytes in the same owner/job scope link to the existing ready upload
 and do not create another outbox row. A job description uses the same PDF/DOCX
@@ -67,8 +69,12 @@ Unfinished sessions expire after `UPLOAD_SESSION_TTL_SECONDS` (one hour by
 default); expiration is applied when a session is read or its content is
 submitted. Run `upload-expire-sessions` to mark all other elapsed `CREATED`
 sessions as `EXPIRED` without waiting for a request. This command changes
-metadata only; it does not delete quarantined objects. A retention period for
-completed, blocked, or failed uploads is not defined for this local MVP.
+metadata only. Run `upload-cleanup-quarantine` to expire sessions and remove
+stale, unreferenced temporary files older than
+`UPLOAD_QUARANTINE_ORPHAN_TTL_SECONDS` (24 hours by default). It leaves files
+referenced by any upload, including `READY` and `BLOCKED` uploads, and skips
+files belonging to active sessions. A retention period for completed, blocked,
+or failed uploads is not defined for this local MVP.
 Quarantine filenames remain internal metadata and are not returned by the API.
 
 All endpoints refuse requests unless `UPLOAD_ENV=development`; the identity is

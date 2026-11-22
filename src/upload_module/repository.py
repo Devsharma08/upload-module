@@ -478,3 +478,22 @@ class UploadRepository:
                 (published_at, event_id),
             )
         return cursor.rowcount == 1
+
+    def quarantine_cleanup_state(self) -> tuple[set[str], set[str]]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT upload_id, quarantine_ref, status
+                FROM uploads
+                WHERE status = 'CREATED' OR quarantine_ref IS NOT NULL
+                """
+            ).fetchall()
+        active_upload_ids = {
+            row["upload_id"] for row in rows if row["status"] == "CREATED"
+        }
+        quarantine_refs = {
+            row["quarantine_ref"]
+            for row in rows
+            if row["quarantine_ref"] is not None
+        }
+        return active_upload_ids, quarantine_refs

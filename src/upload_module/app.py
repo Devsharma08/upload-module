@@ -1,4 +1,5 @@
 from functools import partial
+from hashlib import sha256
 import os
 from pathlib import Path
 import secrets
@@ -38,6 +39,7 @@ DEFAULT_MAX_PDF_PAGES = 300
 DEFAULT_MAX_DOCX_ENTRIES = 1000
 DEFAULT_MAX_DOCX_UNCOMPRESSED_BYTES = 100 * 1024 * 1024
 DEFAULT_MAX_DOCX_COMPRESSION_RATIO = 100
+DEFAULT_SCANNER_MAX_ATTEMPTS = 2
 DEFAULT_UPLOAD_SESSION_TTL_SECONDS = 3600
 
 
@@ -151,6 +153,10 @@ async def upload_content(upload_id: str, request: Request) -> dict[str, int | st
         )
 
     max_bytes = _positive_int_setting("UPLOAD_MAX_BYTES", DEFAULT_MAX_UPLOAD_BYTES)
+    scanner_max_attempts = _positive_int_setting(
+        "UPLOAD_SCANNER_MAX_ATTEMPTS",
+        DEFAULT_SCANNER_MAX_ATTEMPTS,
+    )
     quarantine_dir = Path(os.environ.get("UPLOAD_QUARANTINE_DIR", ".quarantine"))
     try:
         quarantine_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -221,6 +227,10 @@ async def upload_content(upload_id: str, request: Request) -> dict[str, int | st
             quarantine_dir,
             max_bytes=max_bytes,
             declared_size_bytes=declared_size,
+            file_prefix=(
+                "upload-"
+                f"{sha256(upload_id.encode('utf-8')).hexdigest()}-"
+            ),
         )
     except UploadTooLargeError as error:
         repository.set_outcome(
@@ -268,6 +278,7 @@ async def upload_content(upload_id: str, request: Request) -> dict[str, int | st
                 scan_file,
                 quarantined.path,
                 executable=scanner_executable,
+                max_attempts=scanner_max_attempts,
             )
         )
     except (ScannerUnavailableError, OSError) as error:

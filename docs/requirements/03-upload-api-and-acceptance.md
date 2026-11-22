@@ -38,6 +38,10 @@ selected.
 The local `upload-expire-sessions` command marks elapsed `CREATED` sessions
 `EXPIRED`; it does not remove quarantined objects. Local retention for
 completed, blocked, and failed uploads remains an explicit open decision.
+The local `upload-cleanup-quarantine` command removes only old, unreferenced
+temporary files; it leaves files referenced by upload records untouched.
+Scanner outages/timeouts are attempted at most twice by default before the
+session is marked `FAILED`.
 
 ## Session and version requirements
 

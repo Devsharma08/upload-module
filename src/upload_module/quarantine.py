@@ -30,9 +30,12 @@ class _QuarantineWriter:
         *,
         max_bytes: int,
         declared_size_bytes: int | None,
+        file_prefix: str,
     ) -> None:
         if max_bytes <= 0:
             raise ValueError("max_bytes must be greater than zero")
+        if not file_prefix or Path(file_prefix).name != file_prefix:
+            raise ValueError("file_prefix must not contain a directory path")
 
         if not quarantine_dir.is_dir():
             raise FileNotFoundError("Quarantine directory does not exist")
@@ -40,7 +43,7 @@ class _QuarantineWriter:
         self._file = NamedTemporaryFile(
             mode="wb",
             dir=quarantine_dir,
-            prefix="upload-",
+            prefix=file_prefix,
             suffix=".part",
             delete=False,
         )
@@ -92,11 +95,13 @@ def write_quarantine(
     *,
     max_bytes: int,
     declared_size_bytes: int | None = None,
+    file_prefix: str = "upload-",
 ) -> QuarantinedUpload:
     writer = _QuarantineWriter(
         quarantine_dir,
         max_bytes=max_bytes,
         declared_size_bytes=declared_size_bytes,
+        file_prefix=file_prefix,
     )
     try:
         for chunk in chunks:
@@ -113,6 +118,7 @@ async def write_quarantine_async(
     *,
     max_bytes: int,
     declared_size_bytes: int | None = None,
+    file_prefix: str = "upload-",
 ) -> QuarantinedUpload:
     writer = await anyio.to_thread.run_sync(
         partial(
@@ -120,6 +126,7 @@ async def write_quarantine_async(
             quarantine_dir,
             max_bytes=max_bytes,
             declared_size_bytes=declared_size_bytes,
+            file_prefix=file_prefix,
         )
     )
     try:
