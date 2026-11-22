@@ -76,3 +76,40 @@ def test_concurrent_uploads_allocate_distinct_version_sequences(
         assert connection.execute(
             "SELECT COUNT(DISTINCT version_seq) FROM uploads"
         ).fetchone()[0] == 2
+
+
+def test_expire_sessions_marks_only_elapsed_created_sessions(
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "metadata.sqlite3"
+    repository = UploadRepository(database_path)
+    expired, _ = repository.create_session(
+        upload_id="expired-session",
+        principal_id="dev-user",
+        idempotency_key="expired-key",
+        request=make_request("expired.pdf"),
+        session_ttl_seconds=3600,
+    )
+    active, _ = repository.create_session(
+        upload_id="active-session",
+        principal_id="dev-user",
+        idempotency_key="active-key",
+        request=make_request("active.pdf"),
+        session_ttl_seconds=3600,
+    )
+    with sqlite3.connect(database_path) as connection:
+        connection.execute(
+            "UPDATE uploads SET expires_at = ? WHERE upload_id = ?",
+            ("2000-01-01T00:00:00+00:00", expired.upload_id),
+        )
+
+    assert repository.expire_sessions() == 1
+    assert repository.get_session(
+        expired.upload_id,
+        principal_id="dev-user",
+    ).status == "EXPIRED"
+    assert repository.get_session(
+        active.upload_id,
+        principal_id="dev-user",
+    ).status == "CREATED"
+    assert repository.expire_sessions() == 0

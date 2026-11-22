@@ -62,7 +62,10 @@ creating the session. Plain-text JD intake is not part of this local MVP.
 
 Unfinished sessions expire after `UPLOAD_SESSION_TTL_SECONDS` (one hour by
 default); expiration is applied when a session is read or its content is
-submitted.
+submitted. Run `upload-expire-sessions` to mark all other elapsed `CREATED`
+sessions as `EXPIRED` without waiting for a request. This command changes
+metadata only; it does not delete quarantined objects. A retention period for
+completed, blocked, or failed uploads is not defined for this local MVP.
 Quarantine filenames remain internal metadata and are not returned by the API.
 
 All endpoints refuse requests unless `UPLOAD_ENV=development`; the identity is

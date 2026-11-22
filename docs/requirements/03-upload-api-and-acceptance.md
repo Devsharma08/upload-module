@@ -35,6 +35,9 @@ shape is a development interface, not final product approval. Its `READY`
 outbox event is persisted locally and can be dispatched to a development-only
 filesystem handoff using `upload-dispatch-outbox`; no production queue is
 selected.
+The local `upload-expire-sessions` command marks elapsed `CREATED` sessions
+`EXPIRED`; it does not remove quarantined objects. Local retention for
+completed, blocked, and failed uploads remains an explicit open decision.
 
 ## Session and version requirements
 

@@ -250,6 +250,19 @@ class UploadRepository:
             raise UploadSessionNotFoundError("Upload session was not found")
         return _session_from_row(row)
 
+    def expire_sessions(self) -> int:
+        now = datetime.now(timezone.utc).isoformat()
+        with self._connect() as connection:
+            cursor = connection.execute(
+                """
+                UPDATE uploads
+                SET status = ?
+                WHERE status = 'CREATED' AND expires_at <= ?
+                """,
+                (UploadOutcome.EXPIRED.value, now),
+            )
+        return cursor.rowcount
+
     def complete_upload(
         self,
         upload_id: str,

@@ -17,6 +17,7 @@ dependencies = [
 
 [project.scripts]
 upload-dispatch-outbox = "upload_module.dispatch_outbox:main"
+upload-expire-sessions = "upload_module.expire_sessions:main"
 
 [project.optional-dependencies]
 dev = [
