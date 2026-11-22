@@ -1,11 +1,13 @@
 from hashlib import sha256
 
+import anyio
 import pytest
 
 from upload_module.quarantine import (
     UploadSizeMismatchError,
     UploadTooLargeError,
     write_quarantine,
+    write_quarantine_async,
 )
 
 
@@ -111,3 +113,29 @@ def test_write_quarantine_rejects_missing_directory(tmp_path) -> None:
             missing_dir,
             max_bytes=10,
         )
+
+
+@pytest.mark.anyio
+async def test_write_quarantine_async_removes_partial_file_on_cancellation(
+    tmp_path,
+) -> None:
+    chunk_written = anyio.Event()
+
+    async def chunks():
+        yield b"partial upload"
+        chunk_written.set()
+        await anyio.sleep_forever()
+
+    async def upload() -> None:
+        await write_quarantine_async(
+            chunks(),
+            tmp_path,
+            max_bytes=100,
+        )
+
+    async with anyio.create_task_group() as task_group:
+        task_group.start_soon(upload)
+        await chunk_written.wait()
+        task_group.cancel_scope.cancel()
+
+    assert list(tmp_path.iterdir()) == []
