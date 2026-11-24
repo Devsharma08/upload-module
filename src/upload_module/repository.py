@@ -123,6 +123,12 @@ class UploadRepository:
                     created_at TEXT NOT NULL,
                     published_at TEXT
                 );
+
+                CREATE TABLE IF NOT EXISTS expired_upload_archive (
+                    upload_id TEXT PRIMARY KEY,
+                    archived_at TEXT NOT NULL,
+                    record_json TEXT NOT NULL
+                );
                 """
             )
         self.database_path.chmod(0o600)
@@ -163,19 +169,11 @@ class UploadRepository:
 
         with self._connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
-            connection.execute(
-                """
-                UPDATE uploads
-                SET status = ?
-                WHERE principal_id = ? AND idempotency_key = ?
-                    AND status = 'CREATED' AND expires_at <= ?
-                """,
-                (
-                    UploadOutcome.EXPIRED.value,
-                    principal_id,
-                    idempotency_key,
-                    now,
-                ),
+            self._archive_expired_created(
+                connection,
+                now,
+                principal_id=principal_id,
+                idempotency_key=idempotency_key,
             )
             existing = connection.execute(
                 """
@@ -225,19 +223,11 @@ class UploadRepository:
     def get_session(self, upload_id: str, *, principal_id: str) -> UploadSession:
         with self._connect() as connection:
             now = datetime.now(timezone.utc).isoformat()
-            connection.execute(
-                """
-                UPDATE uploads
-                SET status = ?
-                WHERE upload_id = ? AND principal_id = ?
-                    AND status = 'CREATED' AND expires_at <= ?
-                """,
-                (
-                    UploadOutcome.EXPIRED.value,
-                    upload_id,
-                    principal_id,
-                    now,
-                ),
+            self._archive_expired_created(
+                connection,
+                now,
+                upload_id=upload_id,
+                principal_id=principal_id,
             )
             row = connection.execute(
                 """
@@ -253,15 +243,72 @@ class UploadRepository:
     def expire_sessions(self) -> int:
         now = datetime.now(timezone.utc).isoformat()
         with self._connect() as connection:
-            cursor = connection.execute(
-                """
-                UPDATE uploads
-                SET status = ?
-                WHERE status = 'CREATED' AND expires_at <= ?
-                """,
-                (UploadOutcome.EXPIRED.value, now),
+            return self._archive_expired_created(connection, now)
+
+    def _archive_expired_created(
+        self,
+        connection: sqlite3.Connection,
+        now: str,
+        *,
+        upload_id: str | None = None,
+        principal_id: str | None = None,
+        idempotency_key: str | None = None,
+    ) -> int:
+        filters = ["status = 'CREATED'", "expires_at <= ?"]
+        values: list[str] = [now]
+        if upload_id is not None:
+            filters.append("upload_id = ?")
+            values.append(upload_id)
+        if principal_id is not None:
+            filters.append("principal_id = ?")
+            values.append(principal_id)
+        if idempotency_key is not None:
+            filters.append("idempotency_key = ?")
+            values.append(idempotency_key)
+
+        rows = connection.execute(
+            f"SELECT * FROM uploads WHERE {' AND '.join(filters)}",
+            values,
+        ).fetchall()
+        if not rows:
+            return 0
+
+        archive_records = []
+        for row in rows:
+            record = {
+                "upload_id": row["upload_id"],
+                "version_id": None,
+                "owner_id": row["owner_id"],
+                "job_id": row["job_id"],
+                "track": row["track"],
+                "filename": row["filename"],
+                "outcome": UploadOutcome.EXPIRED.value,
+                "expires_at": row["expires_at"],
+                "expired_at": now,
+            }
+            archive_records.append(
+                (
+                    row["upload_id"],
+                    now,
+                    json.dumps(record, sort_keys=True, separators=(",", ":")),
+                )
             )
-        return cursor.rowcount
+        connection.executemany(
+            """
+            INSERT OR IGNORE INTO expired_upload_archive (
+                upload_id, archived_at, record_json
+            ) VALUES (?, ?, ?)
+            """,
+            archive_records,
+        )
+        connection.executemany(
+            "UPDATE uploads SET status = ? WHERE upload_id = ?",
+            [
+                (UploadOutcome.EXPIRED.value, row["upload_id"])
+                for row in rows
+            ],
+        )
+        return len(rows)
 
     def complete_upload(
         self,
@@ -359,11 +406,13 @@ class UploadRepository:
                 payload = json.dumps(
                     {
                         "upload_id": upload_id,
+                        "version_id": upload_id,
                         "version_seq": sequence,
                         "owner_id": row["owner_id"],
                         "job_id": row["job_id"],
                         "track": row["track"],
                         "sha256": digest,
+                        "original_sha256": digest,
                         "quarantine_ref": quarantine_ref,
                     },
                     sort_keys=True,

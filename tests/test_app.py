@@ -197,8 +197,12 @@ async def test_upload_session_and_content_reach_ready(
     assert response.status_code == 200
     result = response.json()
     assert result["status"] == "READY"
+    assert result["outcome"] == "READY"
+    assert result["track"] == "resume"
+    assert result["version_id"] == upload_id
     assert result["size_bytes"] == len(content)
     assert result["sha256"] == sha256(content).hexdigest()
+    assert result["original_sha256"] == sha256(content).hexdigest()
     assert result["actual_type"] == "application/pdf"
     assert result["page_count"] == 1
     assert result["version_seq"] == 1
@@ -459,6 +463,11 @@ async def test_duplicate_upload_links_existing_version_without_new_outbox_event(
     assert first_result.json()["status"] == "READY"
     assert second_result.json()["status"] == "DUPLICATE"
     assert second_result.json()["duplicate_of"] == first_session.json()["upload_id"]
+    assert second_result.json()["version_id"] == first_session.json()["upload_id"]
+    assert (
+        second_result.json()["original_sha256"]
+        == first_result.json()["original_sha256"]
+    )
     assert second_result.json()["version_seq"] is None
     assert len(list((tmp_path / "quarantine").glob("upload-*.part"))) == 1
     with sqlite3.connect(tmp_path / "metadata.sqlite3") as connection:
@@ -549,6 +558,8 @@ async def test_upload_fails_closed_when_scanner_is_unavailable(
 
     assert response.status_code == 503
     assert status_response.json()["status"] == "FAILED"
+    assert status_response.json()["size_bytes"] == len(make_pdf())
+    assert status_response.json()["original_sha256"] == sha256(make_pdf()).hexdigest()
     assert list((tmp_path / "quarantine").iterdir()) == []
 
 

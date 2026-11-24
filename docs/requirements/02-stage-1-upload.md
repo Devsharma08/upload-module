@@ -28,6 +28,8 @@ intake checks pass.
   processing.
 - **S1-007:** Store quarantined raw bytes in write-once storage or enforce an
   equivalent immutability boundary: no later stage may modify the original.
+  The local MVP changes completed quarantine files to owner-read-only mode;
+  this is a local filesystem safeguard, not immutable object storage.
 - **S1-008:** The quarantine pointer MUST be opaque and access-controlled. Raw
   storage credentials MUST NOT appear in API responses or handoff contracts.
 - **S1-009:** Enforce a configured hard byte limit while streaming, not solely
@@ -60,7 +62,9 @@ intake checks pass.
   boundary. Malware findings produce `BLOCKED` and the file MUST NOT be parsed.
 - **S1-018:** Treat storage/scanner failures as infrastructure failures, not
   clean results. Route to `FAILED`, apply bounded retries, and escalate after
-  retry exhaustion.
+  retry exhaustion. The local MVP retries quarantine directory setup, chunk
+  creation/writes, flushes, and scanner outages/timeouts up to two attempts by
+  default before `FAILED`.
 
 ## 4. Fingerprint, registration, and publication
 
@@ -68,7 +72,9 @@ intake checks pass.
   server. This is the authoritative root for all later traces.
 - **S1-020:** Register each upload in a version registry keyed by owner, job,
   and track. Assign `version_id`, monotonically increasing `version_seq`, and
-  a fixed `uploaded_at` timestamp.
+  a fixed `uploaded_at` timestamp. In the local MVP, `version_id` is the
+  `upload_id` for a ready version; a duplicate's `version_id` points to the
+  existing ready upload.
 - **S1-021:** Use compare-and-swap or equivalent concurrency control so
   simultaneous uploads cannot both become the latest version.
 - **S1-022:** Detect duplicates by authoritative digest within the specified
@@ -94,7 +100,7 @@ Every intake attempt MUST end in exactly one explicit outcome:
 | `REJECTED` | Unsupported/wrong type, over limit, or unopenable encrypted file; return a safe reason and stop. |
 | `BLOCKED` | Malware or approved active-content security risk; hold for security review and never parse. |
 | `FAILED` | Temporary infrastructure failure such as storage/scanner fault; bounded retry then operations escalation. |
-| `EXPIRED` | Upload window or retention period elapsed; apply approved archive/deletion behavior and, when deleted, signed tombstone requirements. |
+| `EXPIRED` | Upload window or retention period elapsed; archive locally, or if data is deleted use the signed tombstone requirements. The local MVP archives expired session metadata and does not delete version data. |
 
 No automatic outcome may reject a candidate as a person. `REJECTED` concerns
 the submitted file or policy, not candidate merit.

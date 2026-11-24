@@ -41,6 +41,7 @@ DEFAULT_MAX_DOCX_ENTRIES = 1000
 DEFAULT_MAX_DOCX_UNCOMPRESSED_BYTES = 100 * 1024 * 1024
 DEFAULT_MAX_DOCX_COMPRESSION_RATIO = 100
 DEFAULT_SCANNER_MAX_ATTEMPTS = 2
+DEFAULT_STORAGE_MAX_ATTEMPTS = 2
 DEFAULT_UPLOAD_SESSION_TTL_SECONDS = 3600
 
 
@@ -83,13 +84,24 @@ def _repository() -> UploadRepository:
 
 
 def _session_response(session: UploadSession) -> dict[str, int | str | None]:
+    version_id = (
+        session.upload_id
+        if session.status == UploadOutcome.READY.value
+        else session.duplicate_of
+        if session.status == UploadOutcome.DUPLICATE.value
+        else None
+    )
     return {
         "upload_id": session.upload_id,
+        "version_id": version_id,
+        "track": session.track,
         "status": session.status,
+        "outcome": session.status,
         "reason_code": session.reason_code,
         "filename": session.filename,
         "size_bytes": session.size_bytes,
         "sha256": session.sha256,
+        "original_sha256": session.sha256,
         "actual_type": session.actual_type,
         "page_count": session.page_count,
         "version_seq": session.version_seq,
@@ -164,13 +176,25 @@ async def upload_content(upload_id: str, request: Request) -> dict[str, int | st
         )
 
     max_bytes = _positive_int_setting("UPLOAD_MAX_BYTES", DEFAULT_MAX_UPLOAD_BYTES)
+    storage_max_attempts = _positive_int_setting(
+        "UPLOAD_STORAGE_MAX_ATTEMPTS",
+        DEFAULT_STORAGE_MAX_ATTEMPTS,
+    )
     scanner_max_attempts = _positive_int_setting(
         "UPLOAD_SCANNER_MAX_ATTEMPTS",
         DEFAULT_SCANNER_MAX_ATTEMPTS,
     )
     quarantine_dir = Path(os.environ.get("UPLOAD_QUARANTINE_DIR", ".quarantine"))
     try:
-        quarantine_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+        for attempt in range(storage_max_attempts):
+            try:
+                quarantine_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+                quarantine_dir.chmod(0o700)
+                break
+            except OSError:
+                if attempt + 1 == storage_max_attempts:
+                    raise
+                await anyio.sleep(min(0.05 * (attempt + 1), 0.2))
     except OSError as error:
         raise HTTPException(
             status_code=503,
@@ -242,6 +266,7 @@ async def upload_content(upload_id: str, request: Request) -> dict[str, int | st
                 "upload-"
                 f"{sha256(upload_id.encode('utf-8')).hexdigest()}-"
             ),
+            max_storage_attempts=storage_max_attempts,
         )
     except UploadTooLargeError as error:
         repository.set_outcome(
@@ -299,6 +324,8 @@ async def upload_content(upload_id: str, request: Request) -> dict[str, int | st
             principal_id=DEVELOPMENT_PRINCIPAL,
             outcome=UploadOutcome.FAILED,
             reason_code="SCANNER_UNAVAILABLE",
+            size_bytes=quarantined.size_bytes,
+            digest=quarantined.sha256,
         )
         raise HTTPException(
             status_code=503,

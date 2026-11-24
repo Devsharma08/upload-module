@@ -47,7 +47,9 @@ def test_dispatch_writes_ready_event_and_marks_it_published(tmp_path: Path) -> N
     assert published_count == 1
     assert event["event_id"] == "opaque-upload-1"
     assert event["event_type"] == "UPLOAD_READY"
+    assert event["payload"]["version_id"] == "opaque-upload-1"
     assert event["payload"]["sha256"] == "a" * 64
+    assert event["payload"]["original_sha256"] == "a" * 64
     assert event["payload"]["quarantine_ref"] == "upload-file.part"
     assert repository.pending_outbox() == []
     with sqlite3.connect(tmp_path / "metadata.sqlite3") as connection:

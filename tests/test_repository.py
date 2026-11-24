@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
+import json
 import sqlite3
 from pathlib import Path
 
@@ -113,3 +114,13 @@ def test_expire_sessions_marks_only_elapsed_created_sessions(
         principal_id="dev-user",
     ).status == "CREATED"
     assert repository.expire_sessions() == 0
+    with sqlite3.connect(database_path) as connection:
+        archived = connection.execute(
+            "SELECT record_json FROM expired_upload_archive WHERE upload_id = ?",
+            (expired.upload_id,),
+        ).fetchone()
+    assert archived is not None
+    archived_record = json.loads(archived[0])
+    assert archived_record["upload_id"] == expired.upload_id
+    assert archived_record["outcome"] == "EXPIRED"
+    assert archived_record["version_id"] is None

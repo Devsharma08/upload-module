@@ -73,14 +73,24 @@ creating the session. Plain-text JD intake is not part of this local MVP.
 
 Unfinished sessions expire after `UPLOAD_SESSION_TTL_SECONDS` (one hour by
 default); expiration is applied when a session is read or its content is
-submitted. Run `upload-expire-sessions` to mark all other elapsed `CREATED`
-sessions as `EXPIRED` without waiting for a request. This command changes
-metadata only. Run `upload-cleanup-quarantine` to expire sessions and remove
+submitted. Expired session metadata is also copied to the local
+`expired_upload_archive` table; registered version data is not deleted, so no
+signed tombstone is created. Stale unreferenced partial files are removed by
+the cleanup command after the configured age. Run `upload-expire-sessions` to
+archive all other elapsed `CREATED` sessions as `EXPIRED` without waiting for
+a request. Run `upload-cleanup-quarantine` to expire sessions and remove
 stale, unreferenced temporary files older than
 `UPLOAD_QUARANTINE_ORPHAN_TTL_SECONDS` (24 hours by default). It leaves files
 referenced by any upload, including `READY` and `BLOCKED` uploads, and skips
 files belonging to active sessions. A retention period for completed, blocked,
 or failed uploads is not defined for this local MVP.
+The API and ready-event contract expose `version_id` (the ready upload's
+`upload_id`) and `original_sha256` (the stored SHA-256 value); the older
+`sha256` response/event key is retained as a compatibility alias. Completed
+quarantine files are changed to owner-read-only mode (`0400`) on the local
+filesystem. Quarantine setup, file creation, chunk writes, and flush operations
+are retried up to
+`UPLOAD_STORAGE_MAX_ATTEMPTS` times (2 by default) before failing.
 Quarantine filenames remain internal metadata and are not returned by the API.
 
 All endpoints refuse requests unless `UPLOAD_ENV=development`; the identity is

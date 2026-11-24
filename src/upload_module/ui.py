@@ -271,7 +271,7 @@ _UPLOAD_PAGE = """<!doctype html>
         ["Size", Number.isInteger(details.size_bytes) ? `${(details.size_bytes / 1024).toFixed(1)} KB` : "—"],
         ["File type", details.actual_type || "—"],
         ["Reason", details.reason_code || "—"],
-        ["SHA-256", details.sha256 ? `${details.sha256.slice(0, 12)}…` : "—"]
+        ["Original SHA-256", (details.original_sha256 || details.sha256) ? `${(details.original_sha256 || details.sha256).slice(0, 12)}…` : "—"]
       ];
       for (const [label, value] of entries) {
         const row = document.createElement("div");

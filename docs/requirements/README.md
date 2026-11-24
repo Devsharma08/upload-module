@@ -1,13 +1,15 @@
 # EGCA Upload Module Requirements
 
 These documents define requirements for the **Python upload module only**,
-based on Stage 1 (Upload and Quarantine) of **EGCA Phase 1 Specification v2**.
+based on Stage 1 (Upload and Quarantine) of the final **EGCA Phase 1
+Specification: Trusted and Traceable Data Preparation (Stages 1-5)** dated
+November 23, 2026. This final DOCX replaces Phase 1 Specification v2.
 They are not a specification for the complete five-stage pipeline.
 
 The source specification is
-[`EGCA_Phase1_Specification_v2.pdf`](../../../Downloads/EGCA_Phase1_Specification_v2.pdf)
-in the author's Downloads folder. Keep the source PDF as the authority when an
-interpretation here is disputed. These notes organize and clarify its
+[the final EGCA Phase 1 specification (DOCX)](../../../Downloads/EGCA%20Phase%201%20Final%20Specification%20Trusted%20and%20Traceable%20Data%20Preparation%20%28Stages.docx)
+in the author's Downloads folder. Keep this final source DOCX as the authority
+when an interpretation here is disputed. These notes organize and clarify its
 requirements; they do not silently make product, policy, or vendor decisions.
 
 ## Documents

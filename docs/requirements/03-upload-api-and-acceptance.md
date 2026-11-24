@@ -36,12 +36,19 @@ outbox event is persisted locally and can be dispatched to a development-only
 filesystem handoff using `upload-dispatch-outbox`; no production queue is
 selected.
 The local `upload-expire-sessions` command marks elapsed `CREATED` sessions
-`EXPIRED`; it does not remove quarantined objects. Local retention for
-completed, blocked, and failed uploads remains an explicit open decision.
+`EXPIRED` and copies their metadata to `expired_upload_archive`. The local MVP
+does not delete registered version data, so it does not create deletion
+tombstones. The cleanup command does remove stale unreferenced partial files.
+Local retention for completed, blocked, and failed uploads remains an explicit
+open decision.
 The local `upload-cleanup-quarantine` command removes only old, unreferenced
 temporary files; it leaves files referenced by upload records untouched.
 Scanner outages/timeouts are attempted at most twice by default before the
 session is marked `FAILED`.
+Quarantine files are changed to owner-read-only mode after a complete write.
+The local writer retries quarantine directory setup, file creation, chunk
+writes, and flushes up to two attempts by default before marking the upload
+`FAILED`.
 
 ## Session and version requirements
 
@@ -51,8 +58,9 @@ session is marked `FAILED`.
   context. The same key and same request replay the original result; a
   different request conflicts.
 - **API-003:** Session expiry is enforced server-side. Expiry revokes further
-  byte transfer and routes the session to `EXPIRED`; abandoned bytes are
-  cleaned up according to retention policy.
+  byte transfer and routes the session to `EXPIRED`; the local MVP archives the
+  expired session metadata and cleans stale partial bytes. Since it does not
+  delete version data, signed deletion tombstones are not produced.
 - **API-004:** Version registration is keyed by owner, job, and track. The
   `version_seq` is monotonic within that scope.
 - **API-005:** Concurrent registrations use compare-and-swap or equivalent

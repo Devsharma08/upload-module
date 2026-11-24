@@ -1,8 +1,11 @@
 from hashlib import sha256
+import os
+import stat
 
 import anyio
 import pytest
 
+import upload_module.quarantine as quarantine
 from upload_module.quarantine import (
     UploadSizeMismatchError,
     UploadTooLargeError,
@@ -22,6 +25,85 @@ def test_write_quarantine_saves_bytes_and_returns_digest(tmp_path) -> None:
     assert result.path.read_bytes() == content
     assert result.size_bytes == len(content)
     assert result.sha256 == sha256(content).hexdigest()
+    assert stat.S_IMODE(result.path.stat().st_mode) == 0o400
+
+
+def test_write_quarantine_retries_storage_write_without_corrupting_bytes(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    actual_write = os.write
+    calls = 0
+
+    def flaky_write(fd: int, content: bytes) -> int:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            actual_write(fd, content[:2])
+            raise OSError("transient storage failure")
+        return actual_write(fd, content)
+
+    monkeypatch.setattr(quarantine.os, "write", flaky_write)
+    monkeypatch.setattr(quarantine, "sleep", lambda _seconds: None)
+
+    result = write_quarantine(
+        [b"complete chunk"],
+        tmp_path,
+        max_bytes=100,
+        max_storage_attempts=2,
+    )
+
+    assert result.path.read_bytes() == b"complete chunk"
+    assert calls == 2
+
+
+def test_write_quarantine_retries_temporary_file_creation(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    actual_mkstemp = quarantine.mkstemp
+    calls = 0
+
+    def flaky_mkstemp(**kwargs) -> tuple[int, str]:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise OSError("transient storage failure")
+        return actual_mkstemp(**kwargs)
+
+    monkeypatch.setattr(quarantine, "mkstemp", flaky_mkstemp)
+    monkeypatch.setattr(quarantine, "sleep", lambda _seconds: None)
+
+    result = write_quarantine(
+        [b"complete chunk"],
+        tmp_path,
+        max_bytes=100,
+        max_storage_attempts=2,
+    )
+
+    assert result.path.read_bytes() == b"complete chunk"
+    assert calls == 2
+
+
+def test_write_quarantine_cleans_partial_file_after_storage_retries_exhaust(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def failing_write(_fd: int, _content: bytes) -> int:
+        raise OSError("storage unavailable")
+
+    monkeypatch.setattr(quarantine.os, "write", failing_write)
+    monkeypatch.setattr(quarantine, "sleep", lambda _seconds: None)
+
+    with pytest.raises(OSError, match="storage unavailable"):
+        write_quarantine(
+            [b"upload"],
+            tmp_path,
+            max_bytes=100,
+            max_storage_attempts=2,
+        )
+
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_write_quarantine_removes_partial_file_when_limit_is_exceeded(
